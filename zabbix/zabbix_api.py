@@ -28,7 +28,13 @@
 # broken. This is a work in progress.
 
 import httplib
-import json
+try:
+	# Python 2.5
+	import json
+except ImportError:
+	# Python 2.4
+	import simplejson as json
+
 import sys
 
 class ZabbixAPIException(Exception):
@@ -56,6 +62,7 @@ class zabbix_api(object):
     application = None
     trigger = None
     sysmap = None
+    template = None
 
     def __init__(self, **kwargs):
         if 'server' in kwargs:
@@ -75,6 +82,7 @@ class zabbix_api(object):
         self.application = zabbix_api_application(self)
         self.trigger = zabbix_api_trigger(self)
         self.sysmap = zabbix_api_sysmap(self)
+        self.template = zabbix_api_template(self)
 
         self.id = 0
 
@@ -105,16 +113,16 @@ class zabbix_api(object):
         return json.dumps(obj)
 
     def login(self, user='', password='', save=True):
-        if user != '' and password != "":
+        if user != '':
             l_user = user
             l_password = password
 
             if save:
                 self.__username__ = user
                 self.__password__ = password
-        elif self.__username__ != '' and self.__password__ != '':
+        elif self.__username__ != '':
             l_user = self.__username__
-            l_passowrd = self.__password__
+            l_password = self.__password__
         else:
             raise ZabbixAPIException("No authentication information available.")
 
@@ -350,4 +358,64 @@ class zabbix_api_sysmap(zabbix_api_subclass):
         self.__checkauth__()
         obj = self.do_request(self.json_obj('map.getseid', options))
         return obj['result']
+
+class zabbix_api_template(zabbix_api_subclass):
+    def get(self, options={}):
+        self.__checkauth__()
+        obj = self.do_request(self.json_obj('template.get', options))
+        return obj['result']
+
+    def getObjects(self, options={}):
+        self.__checkauth__()
+        obj = self.do_request(self.json_obj('template.getObjects', options))
+        return obj['result']
+
+    def massAdd(self, options={}):
+        self.__checkauth__()
+        obj = self.do_request(self.json_obj('temaplte.massAdd', options))
+        return obj['result']
+
+    def massRemove(self, options={}):
+        self.__checkauth__()
+        obj = self.do_request(self.json_obj('template.massRemove', options))
+        return obj['result']
+
+    def add(self, options={}):
+        self.__checkauth__()
+        obj = self.do_request(self.json_obj('template.add', options))
+        return obj['result']
+
+    def update(self, options={}):
+        self.__checkauth__()
+        obj = self.do_request(self.json_obj('template.update', options))
+        return obj['result']
+
+    def delete(self, options={}):
+        self.__checkauth__()
+        obj = self.do_request(self.json_obj('template.delete', options))
+        return obj['result']
+
+    def linkHosts(self, options={}):
+        self.__checkauth__()
+        obj = self.do_request(self.json_obj('template.linkHosts', options))
+        return obj['result']
+
+    def unlinkHosts(self, options={}):
+        self.__checkauth__()
+        obj = self.do_request(self.json_obj('template.unlinkHosts', options))
+        return obj['result']
+
+    def linkTemplates(self, options={}):
+        self.__checkauth__()
+        obj = self.do_request(self.json_obj('template.linkTemplates', options))
+        return obj['result']
+
+    def unlinkTemplates(self, options={}):
+        self.__checkauth__()
+        obj = self.do_request(self.json_obj('template.unlinkTemplates', options))
+        return obj['result']
+
+
+
+
 
