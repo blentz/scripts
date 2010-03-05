@@ -3,7 +3,7 @@
 #
 #LGPL 2.1   http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
 #Zabbix API Python Library.
-#Original Ruby Library is Copyright (C) 2009 Andrew Nelson nelsonab(at)pobox(removethisword)(dot)com
+#Original Ruby Library is Copyright (C) 2009 Andrew Nelson nelsonab(at)red-tux(dot)net
 #Python Library is Copyright (C) 2009 Brett Lentz brett.lentz(at)gmail(dot)com
 #
 #This library is free software; you can redistribute it and/or
