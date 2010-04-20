@@ -26,26 +26,28 @@
 # Currently, not all of the API is implemented, and some functionality is
 # broken. This is a work in progress.
 
-import httplib
-import urllib2
 import base64
+import hashlib
+import httplib
+import logging
 import string
 import sys
-import logging
+import urllib2
+from socket import gaierror
 
-#logging.config.fileConfig('/tmp/logging.conf')
-logger = logging.getLogger("zabbix_api")
-log=logger.log
-log(10,"Starting logging")
+default_log_handler = logging.StreamHandler(sys.stderr)
+__logger = logging.getLogger("zabbix_api")
+__logger.addHandler(default_log_handler)
+__logger.log(10,"Starting logging")
 
 try:
     # Python 2.5+
     import json
-    log(15,"Using native json library")
+    __logger.log(15,"Using native json library")
 except ImportError:
     # Python 2.4
     import simplejson as json
-    log(15,"Using simplejson library")
+    __logger.log(15,"Using simplejson library")
 
 class ZabbixAPIException(Exception):
     """ generic zabbix api exception """
@@ -81,30 +83,27 @@ class ZabbixAPI(object):
     sysmap = None
     template = None
 
-    def __init__(
-                 self,
-                 # Server to connect to
-                 server='localhost',
-                 # Path leading to the zabbix install
-                 path='/zabbix/',
-                 # Protocol to use. http or https
-                 proto='http',
-                 # HTTP auth username and password
-                 user=None,
-                 passwd=None,
-                 # Data to pass to each api module 
-                 **kwargs
-                 ):
-        """ Create an API object. 
-    
-        """
+    # Constructor Params:
+    # server: Server to connect to
+    # path: Path leading to the zabbix install
+    # proto: Protocol to use. http or https
+    # We're going to use proto://server/path to find the JSON-RPC api.
+    #
+    # user: HTTP auth username
+    # passwd: HTTP auth password
+    # log_level: logging level
+    # **kwargs: Data to pass to each api module
+    def __init__( self, server='localhost', path='/zabbix', proto='http', user=None,
+                 passwd=None, log_level=logging.WARNING, **kwargs):
+        """ Create an API object.  """
         self._setuplogging()
-        
+        self.set_log_level(log_level)
+
         self.server=server
         self.url=path+'/api_jsonrpc.php'
         self.proto=proto
         self.httpuser=user
-        self.httppasswd=passwd 
+        self.httppasswd=passwd
 
         self.user = ZabbixAPIUser(self,**kwargs)
         self.usergroup = ZabbixAPIUserGroup(self,**kwargs)
@@ -127,20 +126,24 @@ class ZabbixAPI(object):
         self.usermacro = ZabbixAPIUserMacro(self,**kwargs)
         self.map = ZabbixAPIMap(self,**kwargs)
         self.map = ZabbixAPIMap(self,**kwargs)
-        
+
         self.id = 0
 
-        self.debug(6, "url: " + proto+"://" + self.server + self.url)       
+        self.debug(logging.INFO, "url: " + proto+"://" + self.server + self.url)
 
     def _setuplogging(self):
-        self.logger=logging.getLogger("zabbix_api.%s"%self.__class__.__name__)
-        
+        self.logger = logging.getLogger("zabbix_api.%s"%self.__class__.__name__)
+
+    def set_log_level(self, level):
+        self.debug(logging.INFO, "Set logging level to %d" % level)
+        self.logger.setLevel(level)
+
     def debug(self, level, var="", msg=None):
-        strval = ""
+        strval = str(level) + ": "
         if msg:
             strval = strval + str(msg)
         if var != "":
-            strval = strval + ": " + str(var)
+            strval = strval + str(var)
 
         self.logger.log(level,strval)
 
@@ -152,7 +155,7 @@ class ZabbixAPI(object):
                 'id'      : self.id
               }
 
-        self.debug(10, "json_obj: " + str(obj))
+        self.debug(logging.DEBUG, "json_obj: " + str(obj))
 
         return json.dumps(obj)
 
@@ -170,7 +173,10 @@ class ZabbixAPI(object):
         else:
             raise ZabbixAPIException("No authentication information available.")
 
-        self.debug(10,"Trying to login with %s:%s"%(repr(l_user),repr(l_password)))
+        # don't print the raw password.
+        hashed_pw_string = "md5(" + hashlib.md5(l_password).hexdigest() + ")"
+        self.debug(logging.DEBUG,"Trying to login with %s:%s"% \
+                (repr(l_user),repr(hashed_pw_string)))
         obj = self.json_obj('user.authenticate', { 'user' : l_user,
                 'password' : l_password })
         result = self.do_request(obj)
@@ -178,7 +184,7 @@ class ZabbixAPI(object):
 
     def test_login(self):
         if self.auth != '':
-            obj = self.json_obj('user.checkauth', {'sessionid' : self.auth})
+            obj = self.json_obj('user.checkAuthentication', {'sessionid' : self.auth})
             result = self.do_request(obj)
 
             if not result['result']:
@@ -191,26 +197,30 @@ class ZabbixAPI(object):
     def do_request(self, json_obj):
         headers = { 'Content-Type' : 'application/json-rpc',
                     'User-Agent' : 'python/zabbix_api' }
-        
+
         if self.httpuser:
-            self.debug(10,"HTTP Auth enabled")
+            self.debug(logging.INFO,"HTTP Auth enabled")
             auth='Basic ' + string.strip(base64.encodestring(self.httpuser + ':' + self.httppasswd))
-            headers['Authorization']=auth
-        
+            headers['Authorization'] = auth
+
         if self.proto=='http':
             conn = httplib.HTTPConnection(self.server)
         elif self.proto=='https':
             conn = httplib.HTTPSConnection(self.server)
         else:
             raise InvalidProtoError, "%s is not a valid protocol"%repr(self.proto)
-        self.debug(10,"Connection object %s"%repr(conn))
-        
-        self.debug(8, "Sending: " + str(json_obj))
-        self.debug(10, "Sending headers: " + str(headers))
-        conn.request("POST", self.url, json_obj, headers)
+        self.debug(logging.DEBUG,"Connection object %s"%repr(conn))
+
+        self.debug(logging.INFO, "Sending: " + str(json_obj))
+        self.debug(logging.DEBUG, "Sending headers: " + str(headers))
+
+        try:
+            conn.request("POST", self.url, json_obj, headers)
+        except gaierror, e:
+            raise ZabbixAPIException("Socket Error: %s" % e)
 
         response = conn.getresponse()
-        self.debug(8, "Response Code: " + str(response.status) + " " + \
+        self.debug(logging.INFO, "Response Code: " + str(response.status) + " " + \
                 response.reason)
 
         # NOTE: Getting a 412 response code means the headers are not in the
@@ -220,7 +230,7 @@ class ZabbixAPI(object):
                     % (response.status, response.reason))
 
         jobj = json.loads(response.read())
-        self.debug(10, "Response Body: " + str(jobj))
+        self.debug(logging.DEBUG, "Response Body: " + str(jobj))
 
         self.id += 1
 
@@ -250,14 +260,14 @@ class ZabbixAPISubClass(ZabbixAPI):
 
     def __init__(self, parent, **kwargs):
         self._setuplogging()
-        self.debug(10,"Creating %s"%self.__class__.__name__)
-        
+        self.debug(logging.INFO,"Creating %s"%self.__class__.__name__)
+
         self.parent = parent
         # Save any extra info passed in 
         for key,val in kwargs.items():
             setattr(self,key,val)
-            self.debug(5,"Set %s:%s"%(repr(key),repr(val)))
-        
+            self.debug(logging.WARNING,"Set %s:%s"%(repr(key),repr(val)))
+
     def __checkauth__(self):
         self.parent.__checkauth__()
 
@@ -266,25 +276,27 @@ class ZabbixAPISubClass(ZabbixAPI):
 
     def json_obj(self, method, param):
         return self.parent.json_obj(method, param)
-        
+
 def checkauth(fn):
     """ Decorator to check authentication of the decorated method """
-    def ret(self,*args,**kwargs):
+    def ret(self,*args):
         self.__checkauth__()
-        return fn(self,kwargs)
+        return fn(self,args)
     return ret
-    
+
 def dojson(name):
     def decorator(fn):
         def wrapper(self,opts):
-            log(5,"Going to do_request for %s with opts %s"%(repr(fn),repr(opts)))
+            self.logger.log(logging.DEBUG, \
+                    "Going to do_request for %s with opts %s" \
+                    %(repr(fn),repr(opts)))
             return self.do_request(self.json_obj(name,opts))['result']
         return wrapper
     return decorator
-        
+
 class ZabbixAPIUser(ZabbixAPISubClass):
-    @checkauth
     @dojson('user.get')
+    @checkauth
     def get(self,**opts):
         """  * Get Users data
  *
@@ -318,9 +330,9 @@ class ZabbixAPIUser(ZabbixAPISubClass):
  * @return array
         """
         return opts
-    
-    @checkauth
+
     @dojson('user.checkAuthentication')
+    @checkauth
     def checkAuthentication(self,**opts):
         """  * Check if session ID is authenticated
  *
@@ -335,9 +347,9 @@ class ZabbixAPIUser(ZabbixAPISubClass):
  * @return boolean
  """
         return opts
-    
-    @checkauth
+
     @dojson('user.getObjects')
+    @checkauth
     def getObjects(self,**opts):
         """  * Get User ID by User alias
  *
@@ -351,9 +363,9 @@ class ZabbixAPIUser(ZabbixAPISubClass):
  * @param array $user_data['alias'] User alias
  * @return string|boolean """
         return opts
-    
-    @checkauth
+
     @dojson('user.add')
+    @checkauth
     def add(self,**opts):
         """  * Add Users
  *
@@ -385,9 +397,9 @@ class ZabbixAPIUser(ZabbixAPISubClass):
  * @return array|boolean
   """
         return opts
-    
-    @checkauth
+
     @dojson('user.update')
+    @checkauth
     def update(self,**opts):
         """  * Update Users
  *
@@ -419,9 +431,9 @@ class ZabbixAPIUser(ZabbixAPISubClass):
  * @param string $users['user_medias']['period']
  * @return boolean """
         return opts
-    
-    @checkauth
+
     @dojson('user.updateProfile')
+    @checkauth
     def updateProfile(self,**opts):
         """  * Update Users
  *
@@ -453,9 +465,9 @@ class ZabbixAPIUser(ZabbixAPISubClass):
  * @param string $users['user_medias']['period']
  * @return boolean """
         return opts
-    
-    @checkauth
+
     @dojson('user.delete')
+    @checkauth
     def delete(self,**opts):
         """  * Delete Users
  *
@@ -467,12 +479,12 @@ class ZabbixAPIUser(ZabbixAPISubClass):
  *
  * @param array $users
  * @param array $users[0,...]['userids']
- * @return boolean 
+ * @return boolean
  """
         return opts
-    
-    @checkauth
+
     @dojson('user.addMedia')
+    @checkauth
     def addMedia(self,**opts):
         """  * Add Medias for User
  *
@@ -492,9 +504,9 @@ class ZabbixAPIUser(ZabbixAPISubClass):
  * @return boolean
   """
         return opts
-    
-    @checkauth
+
     @dojson('user.deleteMedia')
+    @checkauth
     def deleteMedia(self,**opts):
         """  * Delete User Medias
  *
@@ -509,9 +521,9 @@ class ZabbixAPIUser(ZabbixAPISubClass):
  * @return boolean
   """
         return opts
-    
-    @checkauth
+
     @dojson('user.updateMedia')
+    @checkauth
     def updateMedia(self,**opts):
         """  * Update Medias for User
  *
@@ -535,9 +547,9 @@ class ZabbixAPIUser(ZabbixAPISubClass):
         return opts
 
 class ZabbixAPIHost(ZabbixAPISubClass):
-    
-    @checkauth
+
     @dojson('host.get')
+    @checkauth
     def get(self,**opts):
         """  * Get Host data
  *
@@ -580,9 +592,9 @@ class ZabbixAPIHost(ZabbixAPISubClass):
  * @return array|boolean Host data as array or false if error
  """
         return opts
-    
-    @checkauth
+
     @dojson('host.getObjects')
+    @checkauth
     def getObjects(self,**opts):
         """  * Get Host ID by Host name
  *
@@ -597,9 +609,9 @@ class ZabbixAPIHost(ZabbixAPISubClass):
  * @return int|boolean
   """
         return opts
-    
-    @checkauth
+
     @dojson('host.create')
+    @checkauth
     def create(self,**opts):
         """  * Add Host
  *
@@ -628,9 +640,9 @@ class ZabbixAPIHost(ZabbixAPISubClass):
  * @return boolean
   """
         return opts
-    
-    @checkauth
+
     @dojson('host.update')
+    @checkauth
     def update(self,**opts):
         """  * Update Host
  *
@@ -659,9 +671,9 @@ class ZabbixAPIHost(ZabbixAPISubClass):
  * @return boolean
   """
         return opts
-    
-    @checkauth
+
     @dojson('host.massUpdate')
+    @checkauth
     def massUpdate(self,**opts):
         """  * Mass update hosts
  *
@@ -691,9 +703,9 @@ class ZabbixAPIHost(ZabbixAPISubClass):
  * @return boolean
   """
         return opts
-    
-    @checkauth
+
     @dojson('host.massAdd')
+    @checkauth
     def massAdd(self,**opts):
         """  * Add Hosts to HostGroups. All Hosts are added to all HostGroups.
  *
@@ -709,9 +721,9 @@ class ZabbixAPIHost(ZabbixAPISubClass):
  * @return boolean
   """
         return opts
-    
-    @checkauth
+
     @dojson('host.massRemove')
+    @checkauth
     def massRemove(self,**opts):
         """  * remove Hosts to HostGroups. All Hosts are added to all HostGroups.
  *
@@ -727,9 +739,9 @@ class ZabbixAPIHost(ZabbixAPISubClass):
  * @return boolean
   """
         return opts
-    
-    @checkauth
+
     @dojson('host.delete')
+    @checkauth
     def delete(self,**opts):
         """  * Delete Host
  *
@@ -744,10 +756,10 @@ class ZabbixAPIHost(ZabbixAPISubClass):
  * @return array|boolean
   """
         return opts
-    
+
 class ZabbixAPIItem(ZabbixAPISubClass):
-    @checkauth
     @dojson('item.get')
+    @checkauth
     def get(self,**opts):
         """  * Get items data
  *
@@ -774,8 +786,8 @@ class ZabbixAPIItem(ZabbixAPISubClass):
 """
         return opts
     
-    @checkauth
     @dojson('item.getObjects')
+    @checkauth
     def getObjects(self,**opts):
         """      * Get itemid by host.name and item.key
      *
@@ -791,9 +803,9 @@ class ZabbixAPIItem(ZabbixAPISubClass):
      * @return int|boolean
 """
         return opts
-    
-    @checkauth
+
     @dojson('item.add')
+    @checkauth
     def add(self,**opts):
         """      * Add item
      *
@@ -842,9 +854,9 @@ class ZabbixAPIItem(ZabbixAPISubClass):
      * @return array|boolean
 """
         return opts
-    
-    @checkauth
+
     @dojson('item.update')
+    @checkauth
     def update(self,**opts):
         """  * Update item
  *
@@ -858,9 +870,9 @@ class ZabbixAPIItem(ZabbixAPISubClass):
  * @return boolean
 """
         return opts
-    
-    @checkauth
+
     @dojson('item.delete')
+    @checkauth
     def delete(self,**opts):
         """  * Delete items
  *
@@ -878,8 +890,8 @@ class ZabbixAPIItem(ZabbixAPISubClass):
     
 class ZabbixAPIUserGroup(ZabbixAPISubClass):
     
-    @checkauth
     @dojson('usergroup.get')
+    @checkauth
     def get(self,**opts):
         """  * Get UserGroups
  *
@@ -906,8 +918,8 @@ class ZabbixAPIUserGroup(ZabbixAPISubClass):
 """
         return opts
     
-    @checkauth
     @dojson('usergroup.getObjects')
+    @checkauth
     def getObjects(self,**opts):
         """  * Get UserGroup ID by UserGroup name.
  *
@@ -928,8 +940,8 @@ class ZabbixAPIUserGroup(ZabbixAPISubClass):
 """
         return opts
     
-    @checkauth
     @dojson('usergroup.add')
+    @checkauth
     def add(self,**opts):
         """  * Create UserGroups.
  *
@@ -953,8 +965,8 @@ class ZabbixAPIUserGroup(ZabbixAPISubClass):
 """
         return opts
     
-    @checkauth
     @dojson('usergroup.update')
+    @checkauth
     def update(self,**opts):
         """  * Update UserGroups.
  *
@@ -969,8 +981,8 @@ class ZabbixAPIUserGroup(ZabbixAPISubClass):
 """
         return opts
     
-    @checkauth
     @dojson('usergroup.updateRights')
+    @checkauth
     def updateRights(self,**opts):
         """  * Update UserGroup rights to HostGroups.
  *
@@ -992,8 +1004,8 @@ class ZabbixAPIUserGroup(ZabbixAPISubClass):
 """
         return opts
     
-    @checkauth
     @dojson('usergroup.addRights')
+    @checkauth
     def addRights(self,**opts):
         """  * Add rights for UserGroup to HostGroups. Existing rights are updated, new ones added.
  *
@@ -1015,8 +1027,8 @@ class ZabbixAPIUserGroup(ZabbixAPISubClass):
 """
         return opts
     
-    @checkauth
     @dojson('usergroup.updateUsers')
+    @checkauth
     def updateUsers(self,**opts):
         """  * Add Users to UserGroup.
  *
@@ -1035,9 +1047,9 @@ class ZabbixAPIUserGroup(ZabbixAPISubClass):
  * @return boolean
 """
         return opts
-    
-    @checkauth
+
     @dojson('usergroup.removeUsers')
+    @checkauth
     def removeUsers(self,**opts):
         """  * Remove users from UserGroup.
  *
@@ -1054,9 +1066,9 @@ class ZabbixAPIUserGroup(ZabbixAPISubClass):
  * @return boolean
 """
         return opts
-    
-    @checkauth
+
     @dojson('usergroup.delete')
+    @checkauth
     def delete(self,**opts):
         """  * Delete UserGroups.
  *
@@ -1073,8 +1085,8 @@ class ZabbixAPIUserGroup(ZabbixAPISubClass):
 
 class ZabbixAPIHostGroup(ZabbixAPISubClass):
 
-    @checkauth
     @dojson('hostgroup.get')
+    @checkauth
     def get(self,**opts):
         """  * Get HostGroups
  *
@@ -1088,8 +1100,8 @@ class ZabbixAPIHostGroup(ZabbixAPISubClass):
  * @return array
 """
 
-    @checkauth
     @dojson('hostgroup.getObjects')
+    @checkauth
     def getObjects(self,**opts):
         """  * Get HostGroup ID by name
  *
@@ -1103,10 +1115,10 @@ class ZabbixAPIHostGroup(ZabbixAPISubClass):
  * @param array $data['name']
  * @return string|boolean HostGroup ID or false if error
 """
-        return opts  
-    
-    @checkauth
+        return opts
+
     @dojson('hostgroup.create')
+    @checkauth
     def create(self,**opts):
         """  * Add HostGroups
  *
@@ -1121,8 +1133,8 @@ class ZabbixAPIHostGroup(ZabbixAPISubClass):
  * @return array
 """
 
-    @checkauth
     @dojson('hostgroup.update')
+    @checkauth
     def update(self,**opts):
         """  * Update HostGroup
  *
@@ -1137,10 +1149,10 @@ class ZabbixAPIHostGroup(ZabbixAPISubClass):
  * @param array $groups[0]['groupid'], ...
  * @return boolean
 """
-        return opts 
-         
-    @checkauth
+        return opts
+
     @dojson('hostgroup.delete')
+    @checkauth
     def delete(self,**opts):
         """  * Delete HostGroups
  *
@@ -1155,8 +1167,8 @@ class ZabbixAPIHostGroup(ZabbixAPISubClass):
  * @return boolean
 """
 
-    @checkauth
     @dojson('hostgroup.massAdd')
+    @checkauth
     def massAdd(self,**opts):
         """  * Add Hosts to HostGroups. All Hosts are added to all HostGroups.
  *
@@ -1172,10 +1184,10 @@ class ZabbixAPIHostGroup(ZabbixAPISubClass):
  * @param array $data['templates']
  * @return boolean
 """
-        return opts 
-         
-    @checkauth
+        return opts
+
     @dojson('hostgroup.massRemove')
+    @checkauth
     def massRemove(self,**opts):
         """  * Remove Hosts from HostGroups
  *
@@ -1192,8 +1204,8 @@ class ZabbixAPIHostGroup(ZabbixAPISubClass):
  * @return boolean
 """
 
-    @checkauth
     @dojson('hostgroup.massUpdate')
+    @checkauth
     def massUpdate(self,**opts):
         """  * Update HostGroups with new Hosts (rewrite)
  *
@@ -1209,12 +1221,12 @@ class ZabbixAPIHostGroup(ZabbixAPISubClass):
  * @param array $data['templates']
  * @return boolean
 """
-        return opts 
-     
+        return opts
+
 class ZabbixAPIApplication(ZabbixAPISubClass):
-         
-    @checkauth
+
     @dojson('application.get')
+    @checkauth
     def get(self,**opts):
         """  * Get Applications data
  *
@@ -1239,8 +1251,8 @@ class ZabbixAPIApplication(ZabbixAPISubClass):
  * @return array|int item data as array or false if error
 """
 
-    @checkauth
     @dojson('application.getObjects')
+    @checkauth
     def getObjects(self,**opts):
         """  * Get Application ID by host.name and item.key
  *
@@ -1255,10 +1267,10 @@ class ZabbixAPIApplication(ZabbixAPISubClass):
  * @param array $app_data['hostid']
  * @return int|boolean
 """
-        return opts 
-             
-    @checkauth
+        return opts
+
     @dojson('application.add')
+    @checkauth
     def add(self,**opts):
         """  * Add Applications
  *
@@ -1274,8 +1286,8 @@ class ZabbixAPIApplication(ZabbixAPISubClass):
  * @return boolean
 """
 
-    @checkauth
     @dojson('application.update')
+    @checkauth
     def update(self,**opts):
         """  * Update Applications
  *
@@ -1290,10 +1302,10 @@ class ZabbixAPIApplication(ZabbixAPISubClass):
  * @param array $app_data['hostid']
  * @return boolean
 """
-        return opts 
-             
-    @checkauth
+        return opts
+
     @dojson('application.delete')
+    @checkauth
     def delete(self,**opts):
         """  * Delete Applications
  *
@@ -1308,8 +1320,8 @@ class ZabbixAPIApplication(ZabbixAPISubClass):
  * @return boolean
 """
 
-    @checkauth
     @dojson('application.addItems')
+    @checkauth
     def addItems(self,**opts):
         """  * Add Items to applications
  *
@@ -1328,8 +1340,8 @@ class ZabbixAPIApplication(ZabbixAPISubClass):
 
 class ZabbixAPITrigger(ZabbixAPISubClass):
 
-    @checkauth
     @dojson('trigger.get')
+    @checkauth
     def get(self,**opts):
         """  * Get Triggers data
  *
@@ -1356,8 +1368,8 @@ class ZabbixAPITrigger(ZabbixAPISubClass):
 """
         return opts 
 
-    @checkauth
     @dojson('trigger.getObjects')
+    @checkauth
     def getObjects(self,**opts):
         """  * Get triggerid by host.host and trigger.expression
  *
@@ -1375,8 +1387,8 @@ class ZabbixAPITrigger(ZabbixAPISubClass):
 """
         return opts 
 
-    @checkauth
     @dojson('trigger.add')
+    @checkauth
     def add(self,**opts):
         """  * Add triggers
  *
@@ -1399,8 +1411,8 @@ class ZabbixAPITrigger(ZabbixAPISubClass):
 """
         return opts 
 
-    @checkauth
     @dojson('trigger.update')
+    @checkauth
     def update(self,**opts):
         """  * Update triggers
  *
@@ -1423,8 +1435,8 @@ class ZabbixAPITrigger(ZabbixAPISubClass):
 """
         return opts 
 
-    @checkauth
     @dojson('trigger.delete')
+    @checkauth
     def delete(self,**opts):
         """  * Delete triggers
  *
@@ -1440,8 +1452,8 @@ class ZabbixAPITrigger(ZabbixAPISubClass):
 """
         return opts 
 
-    @checkauth
     @dojson('trigger.addDependencies')
+    @checkauth
     def addDependencies(self,**opts):
         """  * Add dependency for trigger
  *
@@ -1458,8 +1470,8 @@ class ZabbixAPITrigger(ZabbixAPISubClass):
 """
         return opts 
 
-    @checkauth
     @dojson('trigger.deleteDependencies')
+    @checkauth
     def deleteDependencies(self,**opts):
         """  * Delete trigger dependencis
  *
@@ -1473,12 +1485,12 @@ class ZabbixAPITrigger(ZabbixAPISubClass):
  * @param array $triggers[0,...]['triggerid']
  * @return boolean
 """
-        return opts 
+        return opts
 
 class ZabbixAPISysMap(ZabbixAPISubClass):
 
-    @checkauth
     @dojson('map.get')
+    @checkauth
     def get(self,**opts):
         """  * Get Map data
  *
@@ -1511,10 +1523,10 @@ class ZabbixAPISysMap(ZabbixAPISubClass):
  * @param string $options['sortfield']
  * @return array|boolean Host data as array or false if error
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('map.add')
+    @checkauth
     def add(self,**opts):
         """  * Add Map
  *
@@ -1534,10 +1546,10 @@ class ZabbixAPISysMap(ZabbixAPISubClass):
  * @param int $maps['label_location']
  * @return boolean | array
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('map.update')
+    @checkauth
     def update(self,**opts):
         """  * Update Map
  *
@@ -1557,10 +1569,10 @@ class ZabbixAPISysMap(ZabbixAPISubClass):
  * @param int $maps['label_location']
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('map.delete')
+    @checkauth
     def delete(self,**opts):
         """  * Delete Map
  *
@@ -1574,10 +1586,10 @@ class ZabbixAPISysMap(ZabbixAPISubClass):
  * @param array $sysmaps['sysmapid']
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('map.addLinks')
+    @checkauth
     def addLinks(self,**opts):
         """  * addLinks Map
  *
@@ -1595,10 +1607,10 @@ class ZabbixAPISysMap(ZabbixAPISubClass):
  * @param array $links[0,...]['color']
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('map.addElements')
+    @checkauth
     def addElements(self,**opts):
         """  * Add Element to Sysmap
  *
@@ -1621,10 +1633,10 @@ class ZabbixAPISysMap(ZabbixAPISubClass):
  * @param array $elements[0,...]['url']
  * @param array $elements[0,...]['label_location']
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('map.addLinkTrigger')
+    @checkauth
     def addLinkTrigger(self,**opts):
         """  * Add link trigger to link (Sysmap)
  *
@@ -1639,12 +1651,12 @@ class ZabbixAPISysMap(ZabbixAPISubClass):
  * @param array $links[0,...]['drawtype']
  * @param array $links[0,...]['color']
 """
-        return opts 
+        return opts
 
 class ZabbixAPITemplate(ZabbixAPISubClass):
 
-    @checkauth
     @dojson('template.get')
+    @checkauth
     def get(self,**opts):
         """  * Get Template data
  *
@@ -1658,10 +1670,10 @@ class ZabbixAPITemplate(ZabbixAPISubClass):
  * @param array $options
  * @return array|boolean Template data as array or false if error
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('template.getObjects')
+    @checkauth
     def get(self,**opts):
         """  * Get Template ID by Template name
  *
@@ -1677,8 +1689,8 @@ class ZabbixAPITemplate(ZabbixAPISubClass):
 """
         return opts 
 
-    @checkauth
     @dojson('template.create')
+    @checkauth
     def create(self,**opts):
         """  * Add Template
  *
@@ -1705,10 +1717,10 @@ class ZabbixAPITemplate(ZabbixAPISubClass):
  * @param string $templates['ipmi_password']
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('template.update')
+    @checkauth
     def update(self,**opts):
         """  * Update Template
  *
@@ -1721,10 +1733,10 @@ class ZabbixAPITemplate(ZabbixAPISubClass):
  * @param array $templates multidimensional array with templates data
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('template.delete')
+    @checkauth
     def delete(self,**opts):
         """  * Delete Template
  *
@@ -1738,10 +1750,10 @@ class ZabbixAPITemplate(ZabbixAPISubClass):
  * @param array $templateids['templateids']
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('template.massUpdate')
+    @checkauth
     def massUpdate(self,**opts):
         """  * Mass update hosts
  *
@@ -1770,10 +1782,10 @@ class ZabbixAPITemplate(ZabbixAPISubClass):
  * @param string $hosts['fields']['ipmi_password'] IPMI password. OPTIONAL
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('template.massAdd')
+    @checkauth
     def massAdd(self,**opts):
         """  * Link Template to Hosts
  *
@@ -1790,10 +1802,10 @@ class ZabbixAPITemplate(ZabbixAPISubClass):
  * @param string $data['templates_link']
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('template.massRemove')
+    @checkauth
     def massRemove(self,**opts):
         """  * remove Hosts to HostGroups. All Hosts are added to all HostGroups.
  *
@@ -1809,10 +1821,10 @@ class ZabbixAPITemplate(ZabbixAPISubClass):
  * @param array $data['hosts']
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('template.linkTemplates')
+    @checkauth
     def linkTemplates(self,**opts):
         """  * Link Host to Templates
  *
@@ -1827,11 +1839,11 @@ class ZabbixAPITemplate(ZabbixAPISubClass):
  * @param array $data['templats']
  * @return boolean
 """
-        return opts 
+        return opts
 
 class ZabbixAPIAction(ZabbixAPISubClass):
-    @checkauth
     @dojson('action.get')
+    @checkauth
     def get(self,**opts):
         """  * Get Actions data
  *
@@ -1857,10 +1869,10 @@ class ZabbixAPIAction(ZabbixAPISubClass):
  * @param array $options['order']
  * @return array|int item data as array or false if error
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('action.add')
+    @checkauth
     def add(self,**opts):
         """  * Add actions
  *
@@ -1880,10 +1892,10 @@ class ZabbixAPIAction(ZabbixAPISubClass):
  * @param array $actions[0,...]['url'] OPTIONAL
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('action.update')
+    @checkauth
     def update(self,**opts):
         """  * Update actions
  *
@@ -1904,10 +1916,10 @@ class ZabbixAPIAction(ZabbixAPISubClass):
  * @param array $actions[0,...]['url'] OPTIONAL
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('action.addConditions')
+    @checkauth
     def addConditions(self,**opts):
         """  * add conditions
  *
@@ -1924,10 +1936,10 @@ class ZabbixAPIAction(ZabbixAPISubClass):
  * @param array $conditions[0,...]['operator']
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('action.addOperations')
+    @checkauth
     def addOperations(self,**opts):
         """  * add operations
  *
@@ -1956,10 +1968,10 @@ class ZabbixAPIAction(ZabbixAPISubClass):
  * @param array $operations[0,...]['opconditions']['value']
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('action.delete')
+    @checkauth
     def delete(self,**opts):
         """  * Delete actions
  *
@@ -1973,11 +1985,11 @@ class ZabbixAPIAction(ZabbixAPISubClass):
  * @param array $actionids['actionids']
  * @return boolean
 """
-        return opts 
+        return opts
 
 class ZabbixAPIAlert(ZabbixAPISubClass):
-    @checkauth
     @dojson('alert.get')
+    @checkauth
     def get(self,**opts):
         """  * Get Alerts data
  *
@@ -2003,10 +2015,10 @@ class ZabbixAPIAlert(ZabbixAPISubClass):
  * @param array $options['order']
  * @return array|int item data as array or false if error
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('alert.add')
+    @checkauth
     def add(self,**opts):
         """  * Add alerts
  *
@@ -2026,10 +2038,10 @@ class ZabbixAPIAlert(ZabbixAPISubClass):
  * @param array $alerts[0,...]['url'] OPTIONAL
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('alert.delete')
+    @checkauth
     def delete(self,**opts):
         """  * Delete alerts
  *
@@ -2043,11 +2055,11 @@ class ZabbixAPIAlert(ZabbixAPISubClass):
  * @param array $alertids['alertids']
  * @return boolean
 """
-        return opts 
+        return opts
 
 class ZabbixAPIInfo(ZabbixAPISubClass):
-    @checkauth
     @dojson('apiinfo.version')
+    @checkauth
     def version(self,**opts):
         """  * Get API version
  *
@@ -2059,11 +2071,11 @@ class ZabbixAPIInfo(ZabbixAPISubClass):
  *
  * @return string
 """
-        return opts 
-    
+        return opts
+
 class ZabbixAPIEvent(ZabbixAPISubClass):
-    @checkauth
     @dojson('event.get')
+    @checkauth
     def get(self,**opts):
         """  * Get events data
  *
@@ -2089,10 +2101,10 @@ class ZabbixAPIEvent(ZabbixAPISubClass):
  * @param array $options['order']
  * @return array|int item data as array or false if error
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('event.add')
+    @checkauth
     def add(self,**opts):
         """  * Add events ( without alerts )
  *
@@ -2111,10 +2123,10 @@ class ZabbixAPIEvent(ZabbixAPISubClass):
  * @param array $events[0,...]['acknowledged'] OPTIONAL
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('event.delete')
+    @checkauth
     def delete(self,**opts):
         """  * Delete events by eventids
  *
@@ -2128,10 +2140,10 @@ class ZabbixAPIEvent(ZabbixAPISubClass):
  * @param array $eventids['eventids']
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('event.deleteByTriggerIDs')
+    @checkauth
     def deleteByTriggerIDs(self,**opts):
         """      * Delete events by triggerids
      *
@@ -2144,10 +2156,10 @@ class ZabbixAPIEvent(ZabbixAPISubClass):
      * @param _array $triggerids
      * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('event.acknowledge')
+    @checkauth
     def acknowledge(self,**opts):
         """ 
         events
@@ -2156,11 +2168,11 @@ class ZabbixAPIEvent(ZabbixAPISubClass):
         triggerids
         message
 """
-        return opts 
+        return opts
 
 class ZabbixAPIGraph(ZabbixAPISubClass):
-    @checkauth
     @dojson('graph.get')
+    @checkauth
     def get(self,**opts):
         """ * Get graph data
 *
@@ -2182,10 +2194,10 @@ class ZabbixAPIGraph(ZabbixAPISubClass):
 * @param array $options
 * @return array|boolean host data as array or false if error
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('graph.getObjects')
+    @checkauth
     def getObjects(self,**opts):
         """  * Get graphid by graph name
  *
@@ -2199,10 +2211,10 @@ class ZabbixAPIGraph(ZabbixAPISubClass):
  * @param array $graph_data
  * @return string|boolean graphid
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('graph.add')
+    @checkauth
     def add(self,**opts):
         """  * Add graph
  *
@@ -2231,10 +2243,10 @@ class ZabbixAPIGraph(ZabbixAPISubClass):
  * @param array $graphs multidimensional array with graphs data
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('graph.update')
+    @checkauth
     def update(self,**opts):
         """  * Update graphs
  *
@@ -2242,10 +2254,10 @@ class ZabbixAPIGraph(ZabbixAPISubClass):
  * @param array $graphs multidimensional array with graphs data
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('graph.delete')
+    @checkauth
     def delete(self,**opts):
         """  * Delete graphs
  *
@@ -2254,10 +2266,10 @@ class ZabbixAPIGraph(ZabbixAPISubClass):
  * @param array $graphs['graphids']
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('graph.addItems')
+    @checkauth
     def addItems(self,**opts):
         """  * Add items to graph
  *
@@ -2282,10 +2294,10 @@ class ZabbixAPIGraph(ZabbixAPISubClass):
  * @param array $items multidimensional array with items data
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('graph.deleteItems')
+    @checkauth
     def deleteItems(self,**opts):
         """ /**
  * Delete graph items
@@ -2295,11 +2307,11 @@ class ZabbixAPIGraph(ZabbixAPISubClass):
  * @return boolean
  */
 """
-        return opts 
+        return opts
 
 class ZabbixAPIGraphItem(ZabbixAPISubClass):
-    @checkauth
     @dojson('graphitem.get')
+    @checkauth
     def get(self,**opts):
         """ * Get GraphItems data
 *
@@ -2307,10 +2319,10 @@ class ZabbixAPIGraphItem(ZabbixAPISubClass):
 * @param array $options
 * @return array|boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('graphitem.getObjects')
+    @checkauth
     def getObjects(self,**opts):
         """  * Get graph items by graph id and graph item id
  *
@@ -2320,10 +2332,10 @@ class ZabbixAPIGraphItem(ZabbixAPISubClass):
  * @param array $gitem_data['graphid']
  * @return string|boolean graphid
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('maintenance.get')
+    @checkauth
     def get(self,**opts):
         """  * Get maintenances data
  *
@@ -2348,10 +2360,10 @@ class ZabbixAPIGraphItem(ZabbixAPISubClass):
  * @param string $options['order']
  * @return array|int item data as array or false if error
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('maintenance.getObjects')
+    @checkauth
     def getObjects(self,**opts):
         """  * Get Maintenance ID by host.name and item.key
  *
@@ -2366,10 +2378,10 @@ class ZabbixAPIGraphItem(ZabbixAPISubClass):
  * @param array $maintenance['hostid']
  * @return int|boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('maintenance.add')
+    @checkauth
     def add(self,**opts):
         """  * Add maintenances
  *
@@ -2384,10 +2396,10 @@ class ZabbixAPIGraphItem(ZabbixAPISubClass):
  * @param array $maintenance['hostid']
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('maintenance.update')
+    @checkauth
     def update(self,**opts):
         """  * Update maintenances
  *
@@ -2402,10 +2414,10 @@ class ZabbixAPIGraphItem(ZabbixAPISubClass):
  * @param array $maintenance['hostid']
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('maintenance.delete')
+    @checkauth
     def delete(self,**opts):
         """  * Delete maintenances
  *
@@ -2419,11 +2431,11 @@ class ZabbixAPIGraphItem(ZabbixAPISubClass):
  * @param _array $maintenanceids['maintenanceids']
  * @return boolean
 """
-        return opts 
+        return opts
 
 class ZabbixAPIMap(ZabbixAPISubClass):
-    @checkauth
     @dojson('map.get')
+    @checkauth
     def get(self,**opts):
         """  * Get Map data
  *
@@ -2456,10 +2468,10 @@ class ZabbixAPIMap(ZabbixAPISubClass):
  * @param string $options['sortfield']
  * @return array|boolean Host data as array or false if error
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('map.add')
+    @checkauth
     def add(self,**opts):
         """  * Add Map
  *
@@ -2479,10 +2491,10 @@ class ZabbixAPIMap(ZabbixAPISubClass):
  * @param int $maps['label_location']
  * @return boolean | array
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('update.')
+    @checkauth
     def update(self,**opts):
         """  * Update Map
  *
@@ -2502,10 +2514,10 @@ class ZabbixAPIMap(ZabbixAPISubClass):
  * @param int $maps['label_location']
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('map.delete')
+    @checkauth
     def delete(self,**opts):
         """  * Delete Map
  *
@@ -2519,10 +2531,10 @@ class ZabbixAPIMap(ZabbixAPISubClass):
  * @param array $sysmaps['sysmapid']
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('map.addLinks')
+    @checkauth
     def addLinks(self,**opts):
         """  * addLinks Map
  *
@@ -2540,10 +2552,10 @@ class ZabbixAPIMap(ZabbixAPISubClass):
  * @param array $links[0,...]['color']
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('map.addElements')
+    @checkauth
     def addElements(self,**opts):
         """  * Add Element to Sysmap
  *
@@ -2566,10 +2578,10 @@ class ZabbixAPIMap(ZabbixAPISubClass):
  * @param array $elements[0,...]['url']
  * @param array $elements[0,...]['label_location']
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('map.addLinkTrigger')
+    @checkauth
     def addLinkTrigger(self,**opts):
         """  * Add link trigger to link (Sysmap)
  *
@@ -2584,11 +2596,11 @@ class ZabbixAPIMap(ZabbixAPISubClass):
  * @param array $links[0,...]['drawtype']
  * @param array $links[0,...]['color']
 """
-        return opts 
+        return opts
 
 class ZabbixAPIScreen(ZabbixAPISubClass):
-    @checkauth
     @dojson('screen.get')
+    @checkauth
     def get(self,**opts):
         """  * Get Screen data
  *
@@ -2609,10 +2621,10 @@ class ZabbixAPIScreen(ZabbixAPISubClass):
  * @param string $options['order'] deprecated parameter (for now)
  * @return array|boolean Host data as array or false if error
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('screen.add')
+    @checkauth
     def add(self,**opts):
         """  * Add Screen
  *
@@ -2628,10 +2640,10 @@ class ZabbixAPIScreen(ZabbixAPISubClass):
  * @param int $screens['vsize']
  * @return boolean | array
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('screen.update')
+    @checkauth
     def update(self,**opts):
         """  * Update Screen
  *
@@ -2648,10 +2660,10 @@ class ZabbixAPIScreen(ZabbixAPISubClass):
  * @param int $screens['vsize']
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('screen.delete')
+    @checkauth
     def delete(self,**opts):
         """  * Delete Screen
  *
@@ -2665,10 +2677,10 @@ class ZabbixAPIScreen(ZabbixAPISubClass):
  * @param array $screens[0,...]['screenid']
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('screen.setItems')
+    @checkauth
     def setItems(self,**opts):
         """  * add ScreenItem
  *
@@ -2696,10 +2708,10 @@ class ZabbixAPIScreen(ZabbixAPISubClass):
  * @param int $screen_items['dynamic']
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('screen.deleteItems')
+    @checkauth
     def deleteItems(self,**opts):
         """  * delete ScreenItem
  *
@@ -2712,11 +2724,11 @@ class ZabbixAPIScreen(ZabbixAPISubClass):
  * @param array $screen_itemids
  * @return boolean
 """
-        return opts 
+        return opts
 
 class ZabbixAPIScript(ZabbixAPISubClass):
-    @checkauth
     @dojson('script.get')
+    @checkauth
     def get(self,**opts):
         """  * Get Scripts data
  *
@@ -2741,10 +2753,10 @@ class ZabbixAPIScript(ZabbixAPISubClass):
  * @param string $options['order']
  * @return array|int item data as array or false if error
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('script.getObjects')
+    @checkauth
     def getObjects(self,**opts):
         """  * Get Script ID by host.name and item.key
  *
@@ -2759,10 +2771,10 @@ class ZabbixAPIScript(ZabbixAPISubClass):
  * @param array $script['hostid']
  * @return int|boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('script.add')
+    @checkauth
     def add(self,**opts):
         """  * Add Scripts
  *
@@ -2777,10 +2789,10 @@ class ZabbixAPIScript(ZabbixAPISubClass):
  * @param array $script['hostid']
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('script.update')
+    @checkauth
     def update(self,**opts):
         """  * Update Scripts
  *
@@ -2795,10 +2807,10 @@ class ZabbixAPIScript(ZabbixAPISubClass):
  * @param array $script['hostid']
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('script.delete')
+    @checkauth
     def delete(self,**opts):
         """  * Delete Scripts
  *
@@ -2812,32 +2824,32 @@ class ZabbixAPIScript(ZabbixAPISubClass):
  * @param array $scriptids
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('script.execute')
+    @checkauth
     def execute(self,**opts):
-        """ 
+        """
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('script.getCommand')
-    def getCommand(self,**opts):
-        """ 
-"""
-        return opts 
-
     @checkauth
-    @dojson('script.getScriptsByHosts')
-    def getScriptsByHosts(self,**opts):
-        """ 
+    def getCommand(self,**opts):
+        """
 """
-        return opts 
+        return opts
+
+    @dojson('script.getScriptsByHosts')
+    @checkauth
+    def getScriptsByHosts(self,**opts):
+        """
+"""
+        return opts
 
 class ZabbixAPIUserMacro(ZabbixAPISubClass):
-    @checkauth
     @dojson('usermacro.get')
+    @checkauth
     def get(self,**opts):
         """  * Get UserMacros data
  *
@@ -2869,10 +2881,10 @@ class ZabbixAPIUserMacro(ZabbixAPISubClass):
  * @param string $options['order'] deprecated parameter (for now)
  * @return array|boolean UserMacros data as array or false if error
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('usermacro.getHostMacroObjects')
+    @checkauth
     def getHostMacroObjects(self,**opts):
         """  * Gets all UserMacros data from DB by UserMacros ID
  *
@@ -2886,10 +2898,10 @@ class ZabbixAPIUserMacro(ZabbixAPISubClass):
  * @param string $macro_data['macroid']
  * @return array|boolean UserMacros data as array or false if error
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('usermacro.add')
+    @checkauth
     def add(self,**opts):
         """  * add Host Macro
  *
@@ -2905,10 +2917,10 @@ class ZabbixAPIUserMacro(ZabbixAPISubClass):
  * @param string $macros[0..]['value']
  * @return array of object macros
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('usermacro.update')
+    @checkauth
     def update(self,**opts):
         """  * Update host macros, replace all with new ones
  *
@@ -2924,10 +2936,10 @@ class ZabbixAPIUserMacro(ZabbixAPISubClass):
  * @param string $macros['macros'][0..]['value']
  * @return array|boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('usermacro.updateValue')
+    @checkauth
     def updateValue(self,**opts):
         """  * Update macros values
  *
@@ -2943,10 +2955,10 @@ class ZabbixAPIUserMacro(ZabbixAPISubClass):
  * @param string $macros['macros'][0..]['value']
  * @return array|boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('usermacro.deleteHostMacro')
+    @checkauth
     def deleteHostMacro(self,**opts):
         """  * Delete UserMacros
  *
@@ -2960,10 +2972,10 @@ class ZabbixAPIUserMacro(ZabbixAPISubClass):
  * @param array $hostmacroids['hostmacroids']
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('usermacro.addGlobal')
+    @checkauth
     def addGlobal(self,**opts):
         """  * Add global macros
  *
@@ -2979,10 +2991,10 @@ class ZabbixAPIUserMacro(ZabbixAPISubClass):
  * @param string $macros[0..]['value']
  * @return array|boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('usermacro.deleteGlobalMacro')
+    @checkauth
     def deleteGlobalMacro(self,**opts):
         """  * Delete UserMacros
  *
@@ -2996,10 +3008,10 @@ class ZabbixAPIUserMacro(ZabbixAPISubClass):
  * @param array $globalmacroids['globalmacroids']
  * @return boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('usermacro.validate')
+    @checkauth
     def validate(self,**opts):
         """  * Validates macros expression
  *
@@ -3012,10 +3024,10 @@ class ZabbixAPIUserMacro(ZabbixAPISubClass):
  * @param _array $macros array with macros expressions
  * @return array|boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('usermacro.getGlobalMacroObjects')
+    @checkauth
     def getGlobalMacroObjects(self,**opts):
         """  * Gets all UserMacros data from DB by UserMacros ID
  *
@@ -3029,10 +3041,10 @@ class ZabbixAPIUserMacro(ZabbixAPISubClass):
  * @param string $macro_data['macroid']
  * @return array|boolean UserMacros data as array or false if error
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('usermacro.getHostMacroId')
+    @checkauth
     def getHostMacroId(self,**opts):
         """  * Get UserMacros ID by UserMacros name
  *
@@ -3047,10 +3059,10 @@ class ZabbixAPIUserMacro(ZabbixAPISubClass):
  * @param string $macro_data['hostid']
  * @return int|boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('usermacro.getGlobalMacroId')
+    @checkauth
     def getGlobalMacroId(self,**opts):
         """  * Get UserMacros ID by UserMacros name
  *
@@ -3064,24 +3076,24 @@ class ZabbixAPIUserMacro(ZabbixAPISubClass):
  * @param string $macro_data['macro']
  * @return int|boolean
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('usermacro.getMacros')
+    @checkauth
     def getMacros(self,**opts):
-        """ 
+        """
 """
-        return opts 
+        return opts
 
-    @checkauth
     @dojson('usermacro.resolveTrigger')
-    def resolveTrigger(self,**opts):
-        """ 
-"""
-        return opts 
-
     @checkauth
+    def resolveTrigger(self,**opts):
+        """
+"""
+        return opts
+
     @dojson('usermacro.resolveItem')
+    @checkauth
     def resolveItem(self,**opts):
         """ 
 """
