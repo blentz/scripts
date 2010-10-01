@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import optparse
 import sys
 import traceback
@@ -47,7 +48,7 @@ def errmsg(msg):
 if  __name__ == "__main__":
     options, args = get_options()
 
-    zapi = ZabbixAPI(server=options.server, debug_level=6)
+    zapi = ZabbixAPI(server=options.server, path="", log_level=6)
 
     try:
         zapi.login(options.username, options.password)
@@ -57,8 +58,7 @@ if  __name__ == "__main__":
         sys.stderr.write(str(e) + '\n')
 
     try:
-        for host in zapi.host.get({ 'monitored_hosts' : True,
-                'extendoutput' : True}):
+        for host in zapi.host.get({ 'monitored_hosts' : True,'extendoutput' : True}):
             if host['dns'] == "":
                 print "%s - %s - %s" % (host['host'], host['ip'], host['useip'])
             else:
