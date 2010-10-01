@@ -33,9 +33,10 @@ import logging
 import string
 import sys
 import urllib2
+import json
 from socket import gaierror
 
-default_log_handler = logging.StreamHandler(sys.stderr)
+default_log_handler = logging.StreamHandler(sys.stdout)
 __logger = logging.getLogger("zabbix_api")
 __logger.addHandler(default_log_handler)
 __logger.log(10,"Starting logging")
@@ -63,7 +64,7 @@ class ZabbixAPI(object):
 
     auth = ''
     id = 0
-    url = '/zabbix/api_jsonrpc.php'
+    url = '/api_jsonrpc.php'
     params = None
     method = None
     # HTTP or HTTPS
@@ -93,7 +94,7 @@ class ZabbixAPI(object):
     # passwd: HTTP auth password
     # log_level: logging level
     # **kwargs: Data to pass to each api module
-    def __init__( self, server='localhost', path='/zabbix', proto='http', user=None,
+    def __init__( self, server='localhost', path='/', proto='http', user=None,
                  passwd=None, log_level=logging.WARNING, **kwargs):
         """ Create an API object.  """
         self._setuplogging()
@@ -804,10 +805,10 @@ class ZabbixAPIItem(ZabbixAPISubClass):
 """
         return opts
 
-    @dojson('item.add')
+    @dojson('item.create')
     @checkauth
-    def add(self,**opts):
-        """      * Add item
+    def create(self,**opts):
+        """      * Create item
      *
      * {@source}
      * @access public
