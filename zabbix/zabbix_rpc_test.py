@@ -1,10 +1,8 @@
-#!/bin/env python
-
 import optparse
 import sys
 import traceback
 from getpass import getpass
-from zabbix_api import zabbix_api, ZabbixAPIException
+from zabbix_api import ZabbixAPI, ZabbixAPIException
 
 def get_options():
     """ command-line options """
@@ -49,7 +47,7 @@ def errmsg(msg):
 if  __name__ == "__main__":
     options, args = get_options()
 
-    zapi = zabbix_api(server=options.server, debug_level=6)
+    zapi = ZabbixAPI(server=options.server, debug_level=6)
 
     try:
         zapi.login(options.username, options.password)
