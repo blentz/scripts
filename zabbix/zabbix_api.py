@@ -33,6 +33,7 @@ import logging
 import string
 import sys
 import urllib2
+import urllib
 import json
 from socket import gaierror
 
@@ -204,33 +205,39 @@ class ZabbixAPI(object):
             auth='Basic ' + string.strip(base64.encodestring(self.httpuser + ':' + self.httppasswd))
             headers['Authorization'] = auth
 
-        if self.proto=='http':
-            conn = httplib.HTTPConnection(self.server)
-        elif self.proto=='https':
-            conn = httplib.HTTPSConnection(self.server)
-        else:
-            raise InvalidProtoError, "%s is not a valid protocol"%repr(self.proto)
-        self.debug(logging.DEBUG,"Connection object %s"%repr(conn))
+#        if self.proto=='http':
+#            conn = httplib.HTTPConnection(self.server)
+
+#        elif self.proto=='https':
+#            conn = httplib.HTTPSConnection(self.server, timeout=30)
+#        else:
+#            raise InvalidProtoError, "%s is not a valid protocol"%repr(self.proto)
+#        self.debug(logging.DEBUG,"Connection object %s"%repr(conn))
 
         self.debug(logging.INFO, "Sending: " + str(json_obj))
         self.debug(logging.DEBUG, "Sending headers: " + str(headers))
 
-        try:
-            conn.request("POST", self.url, json_obj, headers)
-        except gaierror, e:
-            raise ZabbixAPIException("Socket Error: %s" % e)
 
-        response = conn.getresponse()
-        self.debug(logging.INFO, "Response Code: " + str(response.status) + " " + \
-                response.reason)
+        req=urllib2.Request(url="%s://%s%s"%(self.proto,self.server,self.url), data=json_obj,headers=headers)
+#        try:
+#            req=urllib2.REQUEST(url=self.url, data=json_obj,header=headers)
+#        except gaierror, e:
+#            raise ZabbixAPIException("Socket Error: %s" % e)
+
+        #response = conn.getresponse()
+        response = urllib2.urlopen(req)
+        self.debug(logging.INFO, "Response Code: " + str(response.code) + " ")
 
         # NOTE: Getting a 412 response code means the headers are not in the
         # list of allowed headers.
-        if response.status != 200:
+        if response.code != 200:
             raise ZabbixAPIException("HTTP ERROR %s: %s"
                     % (response.status, response.reason))
+        reads=response.read()
+        if len(reads)==0:
+            raise ZabbixAPIException("Received zero answer")
 
-        jobj = json.loads(response.read())
+        jobj = json.loads(reads)
         self.debug(logging.DEBUG, "Response Body: " + str(jobj))
 
         self.id += 1
