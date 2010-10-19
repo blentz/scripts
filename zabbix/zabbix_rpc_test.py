@@ -13,7 +13,7 @@ def get_options():
     parser = OptionParser(usage)
 
     parser.add_option("-s", "--server", action="store", type="string", \
-            dest="server", help="Zabbix Server (REQUIRED)")
+            dest="server", help="Zabbix Server URL (REQUIRED)")
     parser.add_option("-u", "--username", action="store", type="string", \
             dest="username", help="Username (Will prompt if not given)")
     parser.add_option("-p", "--password", action="store", type="string", \
@@ -48,7 +48,7 @@ def errmsg(msg):
 if  __name__ == "__main__":
     options, args = get_options()
 
-    zapi = ZabbixAPI(server=options.server, path="", log_level=6)
+    zapi = ZabbixAPI(server=options.server,log_level=3)
 
     try:
         zapi.login(options.username, options.password)
