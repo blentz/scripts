@@ -95,15 +95,15 @@ class ZabbixAPI(object):
     # passwd: HTTP auth password
     # log_level: logging level
     # **kwargs: Data to pass to each api module
-    def __init__( self, server='localhost', path='/', proto='http', user=None,
-                 passwd=None, log_level=logging.WARNING, **kwargs):
+    def __init__( self, server='http://localhost/zabbix',user=None,passwd=None, log_level=logging.WARNING, **kwargs):
         """ Create an API object.  """
         self._setuplogging()
         self.set_log_level(log_level)
 
         self.server=server
-        self.url=path+'/api_jsonrpc.php'
-        self.proto=proto
+        self.url=server+'/api_jsonrpc.php'
+        self.proto=self.server.split("://")[0]
+        #self.proto=proto
         self.httpuser=user
         self.httppasswd=passwd
 
@@ -131,7 +131,7 @@ class ZabbixAPI(object):
 
         self.id = 0
 
-        self.debug(logging.INFO, "url: " + proto+"://" + self.server + self.url)
+        self.debug(logging.INFO, "url: "+ self.url)
 
     def _setuplogging(self):
         self.logger = logging.getLogger("zabbix_api.%s"%self.__class__.__name__)
@@ -205,28 +205,24 @@ class ZabbixAPI(object):
             auth='Basic ' + string.strip(base64.encodestring(self.httpuser + ':' + self.httppasswd))
             headers['Authorization'] = auth
 
-#        if self.proto=='http':
-#            conn = httplib.HTTPConnection(self.server)
-
-#        elif self.proto=='https':
-#            conn = httplib.HTTPSConnection(self.server, timeout=30)
-#        else:
-#            raise InvalidProtoError, "%s is not a valid protocol"%repr(self.proto)
-#        self.debug(logging.DEBUG,"Connection object %s"%repr(conn))
-
         self.debug(logging.INFO, "Sending: " + str(json_obj))
         self.debug(logging.DEBUG, "Sending headers: " + str(headers))
 
+        request=urllib2.Request(url=self.url, data=json_obj,headers=headers)
 
-        req=urllib2.Request(url="%s://%s%s"%(self.proto,self.server,self.url), data=json_obj,headers=headers)
-#        try:
-#            req=urllib2.REQUEST(url=self.url, data=json_obj,header=headers)
-#        except gaierror, e:
-#            raise ZabbixAPIException("Socket Error: %s" % e)
-
-        #response = conn.getresponse()
-        response = urllib2.urlopen(req)
-        self.debug(logging.INFO, "Response Code: " + str(response.code) + " ")
+        if self.proto=="https":
+            https_handler=urllib2.HTTPSHandler(debuglevel=0)
+            opener=urllib2.build_opener(https_handler)
+        elif self.proto=="http":
+            http_handler=urllib2.HTTPHandler(debuglevel=0)
+            opener=urllib2.build_opener(http_handler)
+        else:
+            raise ZabbixAPIException("Unknow protocol %s"%self.proto)
+        
+        urllib2.install_opener(opener)
+        response=opener.open(request,timeout=50)
+        
+        self.debug(logging.INFO, "Response Code: " + str(response.code))
 
         # NOTE: Getting a 412 response code means the headers are not in the
         # list of allowed headers.
@@ -236,7 +232,6 @@ class ZabbixAPI(object):
         reads=response.read()
         if len(reads)==0:
             raise ZabbixAPIException("Received zero answer")
-
         jobj = json.loads(reads)
         self.debug(logging.DEBUG, "Response Body: " + str(jobj))
 
@@ -1277,9 +1272,9 @@ class ZabbixAPIApplication(ZabbixAPISubClass):
 """
         return opts
 
-    @dojson('application.add')
+    @dojson('application.create')
     @checkauth
-    def add(self,**opts):
+    def create(self,**opts):
         """  * Add Applications
  *
  * {@source}
@@ -1395,9 +1390,9 @@ class ZabbixAPITrigger(ZabbixAPISubClass):
 """
         return opts 
 
-    @dojson('trigger.add')
+    @dojson('trigger.create')
     @checkauth
-    def add(self,**opts):
+    def create(self,**opts):
         """  * Add triggers
  *
  * {@source}
@@ -1679,23 +1674,23 @@ class ZabbixAPITemplate(ZabbixAPISubClass):
  * @return array|boolean Template data as array or false if error
 """
         return opts
-
-    @dojson('template.getObjects')
-    @checkauth
-    def get(self,**opts):
-        """  * Get Template ID by Template name
- *
- * {@source}
- * @access public
- * @static
- * @since 1.8
- * @version 1
- *
- * @param array $template_data
- * @param array $template_data['host']
- * @return string templateid
-"""
-        return opts 
+#
+#    @dojson('template.getObjects')
+#    @checkauth
+#    def get(self,**opts):
+#        """  * Get Template ID by Template name
+# *
+# * {@source}
+# * @access public
+# * @static
+# * @since 1.8
+# * @version 1
+# *
+# * @param array $template_data
+# * @param array $template_data['host']
+# * @return string templateid
+#"""
+#        return opts 
 
     @dojson('template.create')
     @checkauth
