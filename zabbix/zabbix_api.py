@@ -84,7 +84,7 @@ class ZabbixAPI(object):
     trigger = None
     sysmap = None
     template = None
-
+    drule = None
     # Constructor Params:
     # server: Server to connect to
     # path: Path leading to the zabbix install
@@ -128,7 +128,7 @@ class ZabbixAPI(object):
         self.usermacro = ZabbixAPIUserMacro(self,**kwargs)
         self.map = ZabbixAPIMap(self,**kwargs)
         self.map = ZabbixAPIMap(self,**kwargs)
-
+        self.drule = ZabbixAPIDRule(self,**kwargs)
         self.id = 0
 
         self.debug(logging.INFO, "url: "+ self.url)
@@ -232,7 +232,11 @@ class ZabbixAPI(object):
         reads=response.read()
         if len(reads)==0:
             raise ZabbixAPIException("Received zero answer")
-        jobj = json.loads(reads)
+        try:
+            jobj = json.loads(reads)
+        except ValueError,msg:
+            print "unable to decode. returned string: %s"%reads
+            sys.exit(-1)
         self.debug(logging.DEBUG, "Response Body: " + str(jobj))
 
         self.id += 1
@@ -1874,9 +1878,9 @@ class ZabbixAPIAction(ZabbixAPISubClass):
 """
         return opts
 
-    @dojson('action.add')
+    @dojson('action.create')
     @checkauth
-    def add(self,**opts):
+    def create(self,**opts):
         """  * Add actions
  *
  * {@source}
@@ -2850,6 +2854,17 @@ class ZabbixAPIScript(ZabbixAPISubClass):
 """
         return opts
 
+
+class ZabbixAPIDRule(ZabbixAPISubClass):
+    @dojson('drule.create')
+    @checkauth
+    def create(self,**opts):
+        return opts
+    @dojson('drule.get')
+    @checkauth
+    def get(self,**opts):
+        return opts
+    
 class ZabbixAPIUserMacro(ZabbixAPISubClass):
     @dojson('usermacro.get')
     @checkauth
