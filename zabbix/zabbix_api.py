@@ -52,7 +52,10 @@ except ImportError:
     __logger.log(15,"Using simplejson library")
 
 class ZabbixAPIException(Exception):
-    """ generic zabbix api exception """
+    """ generic zabbix api exception
+    code list:
+         -32602 - already exists
+    """
     pass
 
 class InvalidProtoError(ZabbixAPIException):
@@ -244,7 +247,7 @@ class ZabbixAPI(object):
         if 'error' in jobj:
             msg = "Error %s: %s, %s" % (jobj['error']['code'],
                     jobj['error']['message'], jobj['error']['data'])
-            raise ZabbixAPIException(msg)
+            raise ZabbixAPIException(msg,jobj['error']['code'])
         return jobj
 
     def logged_in(self):
