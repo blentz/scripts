@@ -130,8 +130,9 @@ class ZabbixAPI(object):
         self.script = ZabbixAPIScript(self,**kwargs)
         self.usermacro = ZabbixAPIUserMacro(self,**kwargs)
         self.map = ZabbixAPIMap(self,**kwargs)
-        self.map = ZabbixAPIMap(self,**kwargs)
+        #self.map = ZabbixAPIMap(self,**kwargs)
         self.drule = ZabbixAPIDRule(self,**kwargs)
+        self.history = ZabbixAPIHistory(self,**kwargs)
         self.id = 0
 
         self.debug(logging.INFO, "url: "+ self.url)
@@ -3119,3 +3120,13 @@ class ZabbixAPIUserMacro(ZabbixAPISubClass):
         """ 
 """
         return opts 
+    
+class ZabbixAPIHistory(ZabbixAPISubClass):
+    @dojson('history.get')
+    @checkauth
+    def get(self,**opts):
+        return opts
+    @dojson('history.delete')
+    @checkauth
+    def delete(self,**opts):
+        return opts
