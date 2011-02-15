@@ -929,51 +929,29 @@ class ZabbixAPIUserGroup(ZabbixAPISubClass):
 """
         return opts
     
-    @dojson('usergroup.getObjects')
+    @dojson('usergroup.create')
     @checkauth
-    def getObjects(self,**opts):
-        """  * Get UserGroup ID by UserGroup name.
- *
- * {@source}
- * @access public
- * @static
- * @since 1.8
- * @version 1
- *
- * <code>
- * $group_data = array(
- *     *string 'name' => 'UserGroup name'
- * );
- * </code>
- *
- * @param array $group_data
- * @return string|boolean
-"""
+    def create(self,**opts):
         return opts
-    
-    @dojson('usergroup.add')
+
+    @dojson('usergroup.exists')
     @checkauth
-    def add(self,**opts):
-        """  * Create UserGroups.
- *
- * {@source}
- * @access public
- * @static
- * @since 1.8
- * @version 1
- *
- * <code>
- * $groups = array( array(
- *     *string 'name'                 => null,
- *     string 'users_status'         => GROUP_STATUS_DISABLED,
- *     string 'gui_access'         => 0,
- *     string 'api_access'         => 0
- * ));
- * </code>
- *
- * @param array $groups multidimensional array with UserGroups data
- * @return boolean
-"""
+    def exists(self,**opts):
+        return opts
+
+    @dojson('usergroup.massAdd')
+    @checkauth
+    def massAdd(self,**opts):
+        return opts
+
+    @dojson('usergroup.massRemove')
+    @checkauth
+    def massRemove(self,**opts):
+        return opts
+
+    @dojson('usergroup.massUpdate')
+    @checkauth
+    def massUpdate(self,**opts):
         return opts
     
     @dojson('usergroup.update')
@@ -991,93 +969,7 @@ class ZabbixAPIUserGroup(ZabbixAPISubClass):
  * @return boolean
 """
         return opts
-    
-    @dojson('usergroup.updateRights')
-    @checkauth
-    def updateRights(self,**opts):
-        """  * Update UserGroup rights to HostGroups.
- *
- * {@source}
- * @access public
- * @static
- * @since 1.8
- * @version 1
- *
- * <code>
- * $rights = array(
- *     *string 'groupid' => 'UserGroup ID',
- *     array 'rights' => array( array('id' => 'HostGroup ID', 'permission' => 'permission'), ..)
- * )
- * </code>
- *
- * @param array $rights multidimensional array with rights data
- * @return boolean
-"""
-        return opts
-    
-    @dojson('usergroup.addRights')
-    @checkauth
-    def addRights(self,**opts):
-        """  * Add rights for UserGroup to HostGroups. Existing rights are updated, new ones added.
- *
- * {@source}
- * @access public
- * @static
- * @since 1.8
- * @version 1
- *
- * <code>
- * $rights = array(
- *     *string 'groupid' => 'UserGroup ID',
- *     array 'rights' => array( array('id' => 'HostGroup ID', 'permission' => 'permission'), ..)
- * )
- * </code>
- *
- * @param array $rights multidimensional array with rights data
- * @return boolean
-"""
-        return opts
-    
-    @dojson('usergroup.updateUsers')
-    @checkauth
-    def updateUsers(self,**opts):
-        """  * Add Users to UserGroup.
- *
- * {@source}
- * @access public
- * @static
- * @since 1.8
- * @version 1
- *
- * <code>
- *     @param $usrgrps[0,...]['usrgrpids']
- *     @param $users[0,...]['userids']
- * </code>
- *
- * @param array $data
- * @return boolean
-"""
-        return opts
-
-    @dojson('usergroup.removeUsers')
-    @checkauth
-    def removeUsers(self,**opts):
-        """  * Remove users from UserGroup.
- *
- * {@source}
- * @access public
- * @static
- * @since 1.8
- * @version 1
- *
- * @param $usrgrps[0,...]['usrgrps']
- * @param $users[0,...]['users']
- *
- * @param array $data
- * @return boolean
-"""
-        return opts
-
+ 
     @dojson('usergroup.delete')
     @checkauth
     def delete(self,**opts):
