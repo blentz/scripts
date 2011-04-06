@@ -58,6 +58,9 @@ class ZabbixAPIException(Exception):
     """
     pass
 
+class Already_Exists(ZabbixAPIException):
+    pass
+
 class InvalidProtoError(ZabbixAPIException):
     """ Recived an invalid proto """
     pass
@@ -245,10 +248,13 @@ class ZabbixAPI(object):
 
         self.id += 1
 
-        if 'error' in jobj:
+        if 'error' in jobj:  # some exception
             msg = "Error %s: %s, %s" % (jobj['error']['code'],
                     jobj['error']['message'], jobj['error']['data'])
-            raise ZabbixAPIException(msg,jobj['error']['code'])
+            if int(jobj["error"]["code"]) == -32602:  # already exists
+                raise Already_Exists(msg,jobj['error']['code'])
+            else:
+                raise ZabbixAPIException(msg,jobj['error']['code'])
         return jobj
 
     def logged_in(self):
