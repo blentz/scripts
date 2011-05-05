@@ -28,13 +28,12 @@
 
 import base64
 import hashlib
-import httplib
 import logging
 import string
 import sys
 import urllib2
-import urllib
 import json
+import re
 from socket import gaierror
 
 default_log_handler = logging.StreamHandler(sys.stdout)
@@ -54,7 +53,8 @@ except ImportError:
 class ZabbixAPIException(Exception):
     """ generic zabbix api exception
     code list:
-         -32602 - already exists
+         -32602 - Invalid params (eg already exists)
+         -32500 - no permissions
     """
     pass
 
@@ -79,7 +79,7 @@ class ZabbixAPI(object):
     # HTTP authentication
     httpuser = None
     httppasswd = None
-
+    timeout = 10
     # sub-class instances.
     user = None
     usergroup = None
@@ -101,11 +101,10 @@ class ZabbixAPI(object):
     # passwd: HTTP auth password
     # log_level: logging level
     # **kwargs: Data to pass to each api module
-    def __init__( self, server='http://localhost/zabbix',user=None,passwd=None, log_level=logging.WARNING, **kwargs):
+    def __init__(self, server='http://localhost/zabbix', user=None, passwd=None, log_level = logging.WARNING, timeout = 10, **kwargs):
         """ Create an API object.  """
         self._setuplogging()
         self.set_log_level(log_level)
-
         self.server=server
         self.url=server+'/api_jsonrpc.php'
         self.proto=self.server.split("://")[0]
@@ -136,12 +135,13 @@ class ZabbixAPI(object):
         #self.map = ZabbixAPIMap(self,**kwargs)
         self.drule = ZabbixAPIDRule(self,**kwargs)
         self.history = ZabbixAPIHistory(self,**kwargs)
+        self.maintenance = ZabbixAPIMaintenance(self,**kwargs)
         self.id = 0
 
         self.debug(logging.INFO, "url: "+ self.url)
 
     def _setuplogging(self):
-        self.logger = logging.getLogger("zabbix_api.%s"%self.__class__.__name__)
+        self.logger = logging.getLogger("zabbix_api.%s" % self.__class__.__name__)
 
     def set_log_level(self, level):
         self.debug(logging.INFO, "Set logging level to %d" % level)
@@ -216,7 +216,6 @@ class ZabbixAPI(object):
         self.debug(logging.DEBUG, "Sending headers: " + str(headers))
 
         request=urllib2.Request(url=self.url, data=json_obj,headers=headers)
-
         if self.proto=="https":
             https_handler=urllib2.HTTPSHandler(debuglevel=0)
             opener=urllib2.build_opener(https_handler)
@@ -227,7 +226,7 @@ class ZabbixAPI(object):
             raise ZabbixAPIException("Unknow protocol %s"%self.proto)
         
         urllib2.install_opener(opener)
-        response=opener.open(request,timeout=50)
+        response=opener.open(request, timeout = self.timeout)
         
         self.debug(logging.INFO, "Response Code: " + str(response.code))
 
@@ -249,9 +248,9 @@ class ZabbixAPI(object):
         self.id += 1
 
         if 'error' in jobj:  # some exception
-            msg = "Error %s: %s, %s" % (jobj['error']['code'],
-                    jobj['error']['message'], jobj['error']['data'])
-            if int(jobj["error"]["code"]) == -32602:  # already exists
+            msg = "Error %s: %s, %s while sending %s" % (jobj['error']['code'],
+                    jobj['error']['message'], jobj['error']['data'],str(json_obj))
+            if re.search(".*already\sexists.*",jobj["error"]["data"],re.I):  # already exists
                 raise Already_Exists(msg,jobj['error']['code'])
             else:
                 raise ZabbixAPIException(msg,jobj['error']['code'])
@@ -2532,23 +2531,14 @@ class ZabbixAPIScreen(ZabbixAPISubClass):
 """
         return opts
 
-    @dojson('screen.add')
+    @dojson('screen.create')
     @checkauth
-    def add(self,**opts):
-        """  * Add Screen
- *
- * {@source}
- * @access public
- * @static
- * @since 1.8
- * @version 1
- *
- * @param _array $screens
- * @param string $screens['name']
- * @param array $screens['hsize']
- * @param int $screens['vsize']
- * @return boolean | array
-"""
+    def create(self,**opts):
+        return opts
+
+    @dojson('screen.exists')
+    @checkauth
+    def exists(self,**opts):
         return opts
 
     @dojson('screen.update')
@@ -2588,52 +2578,6 @@ class ZabbixAPIScreen(ZabbixAPISubClass):
 """
         return opts
 
-    @dojson('screen.setItems')
-    @checkauth
-    def setItems(self,**opts):
-        """  * add ScreenItem
- *
- * {@source}
- * @access public
- * @static
- * @since 1.8
- * @version 1
- *
- * @param array $screen_items
- * @param int $screen_items['screenid']
- * @param int $screen_items['resourcetype']
- * @param int $screen_items['x']
- * @param int $screen_items['y']
- * @param int $screen_items['resourceid']
- * @param int $screen_items['width']
- * @param int $screen_items['height']
- * @param int $screen_items['colspan']
- * @param int $screen_items['rowspan']
- * @param int $screen_items['elements']
- * @param int $screen_items['valign']
- * @param int $screen_items['halign']
- * @param int $screen_items['style']
- * @param int $screen_items['url']
- * @param int $screen_items['dynamic']
- * @return boolean
-"""
-        return opts
-
-    @dojson('screen.deleteItems')
-    @checkauth
-    def deleteItems(self,**opts):
-        """  * delete ScreenItem
- *
- * {@source}
- * @access public
- * @static
- * @since 1.8
- * @version 1
- *
- * @param array $screen_itemids
- * @return boolean
-"""
-        return opts
 
 class ZabbixAPIScript(ZabbixAPISubClass):
     @dojson('script.get')
@@ -3028,3 +2972,26 @@ class ZabbixAPIHistory(ZabbixAPISubClass):
     @checkauth
     def delete(self,**opts):
         return opts
+
+class ZabbixAPIMaintenance(ZabbixAPISubClass):
+    @dojson('maintenance.create')
+    @checkauth
+    def create(self,**opts):
+        return opts
+
+    @dojson('maintenance.delete')
+    @checkauth
+    def delete(self,**opts):
+        return opts
+    @dojson('maintenance.exists')
+    @checkauth
+    def exists(self,**opts):
+        return opts
+    @dojson('maintenance.get')
+    @checkauth
+    def get(self,**opts):
+        return opts
+    @dojson('maintenance.update')
+    @checkauth
+    def update(self,**opts):
+        return opts    
