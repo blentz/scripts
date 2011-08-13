@@ -111,7 +111,7 @@ class ZabbixAPI(object):
         #self.proto=proto
         self.httpuser=user
         self.httppasswd=passwd
-
+        self.timeout = timeout
         self.user = ZabbixAPIUser(self,**kwargs)
         self.usergroup = ZabbixAPIUserGroup(self,**kwargs)
         self.host = ZabbixAPIHost(self,**kwargs)
