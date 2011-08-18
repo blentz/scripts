@@ -2121,9 +2121,9 @@ class ZabbixAPIGraph(ZabbixAPISubClass):
 """
         return opts
 
-    @dojson('graph.add')
+    @dojson('graph.create')
     @checkauth
-    def add(self,**opts):
+    def create(self,**opts):
         """  * Add graph
  *
  * <code>
