@@ -136,6 +136,7 @@ class ZabbixAPI(object):
         self.drule = ZabbixAPIDRule(self,**kwargs)
         self.history = ZabbixAPIHistory(self,**kwargs)
         self.maintenance = ZabbixAPIMaintenance(self,**kwargs)
+        self.proxy = ZabbixAPIProxy(self,**kwargs)
         self.id = 0
 
         self.debug(logging.INFO, "url: "+ self.url)
@@ -2992,6 +2993,12 @@ class ZabbixAPIHistory(ZabbixAPISubClass):
     @dojson('history.delete')
     @checkauth
     def delete(self,**opts):
+        return opts
+
+class ZabbixAPIProxy(ZabbixAPISubClass):
+    @dojson('proxy.get')
+    @checkauth
+    def get(self,**opts):
         return opts
 
 class ZabbixAPIMaintenance(ZabbixAPISubClass):
