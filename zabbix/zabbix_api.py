@@ -1131,6 +1131,27 @@ class ZabbixAPIHostGroup(ZabbixAPISubClass):
 """
         return opts
 
+    @dojson('hostgroup.exists')
+    @checkauth
+    def exists(self,**opts):
+        """  * Check if HostGroups exists
+ *
+ * {@source}
+ * @access public
+ * @static
+ * @since 1.8.3
+ * @version 1
+ *
+ * @param array $data
+ * @param array $data['nodeids']
+ * @param array $data['groupid']
+ * @param array $data['name']
+ * @return boolean
+"""
+        print "Got RESULT"
+        print opts
+        return opts
+
 class ZabbixAPIApplication(ZabbixAPISubClass):
 
     @dojson('application.get')
