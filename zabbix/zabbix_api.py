@@ -136,6 +136,7 @@ class ZabbixAPI(object):
         self.drule = ZabbixAPIDRule(self,**kwargs)
         self.history = ZabbixAPIHistory(self,**kwargs)
         self.maintenance = ZabbixAPIMaintenance(self,**kwargs)
+        self.proxy = ZabbixAPIProxy(self,**kwargs)
         self.id = 0
 
         self.debug(logging.INFO, "url: "+ self.url)
@@ -1129,6 +1130,27 @@ class ZabbixAPIHostGroup(ZabbixAPISubClass):
  * @param array $data['templates']
  * @return boolean
 """
+        return opts
+
+    @dojson('hostgroup.exists')
+    @checkauth
+    def exists(self,**opts):
+        """  * Check if HostGroups exists
+ *
+ * {@source}
+ * @access public
+ * @static
+ * @since 1.8.3
+ * @version 1
+ *
+ * @param array $data
+ * @param array $data['nodeids']
+ * @param array $data['groupid']
+ * @param array $data['name']
+ * @return boolean
+"""
+        print "Got RESULT"
+        print opts
         return opts
 
 class ZabbixAPIApplication(ZabbixAPISubClass):
@@ -2971,6 +2993,12 @@ class ZabbixAPIHistory(ZabbixAPISubClass):
     @dojson('history.delete')
     @checkauth
     def delete(self,**opts):
+        return opts
+
+class ZabbixAPIProxy(ZabbixAPISubClass):
+    @dojson('proxy.get')
+    @checkauth
+    def get(self,**opts):
         return opts
 
 class ZabbixAPIMaintenance(ZabbixAPISubClass):
