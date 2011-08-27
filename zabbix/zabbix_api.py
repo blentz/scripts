@@ -35,6 +35,7 @@ import urllib2
 import json
 import re
 from socket import gaierror
+from collections import deque
 
 default_log_handler = logging.StreamHandler(sys.stdout)
 __logger = logging.getLogger("zabbix_api")
@@ -100,8 +101,10 @@ class ZabbixAPI(object):
     # user: HTTP auth username
     # passwd: HTTP auth password
     # log_level: logging level
+    # r_query_len: max len query history
     # **kwargs: Data to pass to each api module
-    def __init__(self, server='http://localhost/zabbix', user=None, passwd=None, log_level = logging.WARNING, timeout = 10, **kwargs):
+    def __init__(self, server='http://localhost/zabbix', user=None, passwd=None, 
+                 log_level = logging.WARNING, timeout = 10, r_query_len = 10, **kwargs):
         """ Create an API object.  """
         self._setuplogging()
         self.set_log_level(log_level)
@@ -137,9 +140,8 @@ class ZabbixAPI(object):
         self.history = ZabbixAPIHistory(self,**kwargs)
         self.maintenance = ZabbixAPIMaintenance(self,**kwargs)
         self.id = 0
-
+        self.r_query = deque([], maxlen = r_query_len)
         self.debug(logging.INFO, "url: "+ self.url)
-
     def _setuplogging(self):
         self.logger = logging.getLogger("zabbix_api.%s" % self.__class__.__name__)
 
@@ -147,6 +149,11 @@ class ZabbixAPI(object):
         self.debug(logging.INFO, "Set logging level to %d" % level)
         self.logger.setLevel(level)
 
+    def recent_query(self):
+        """
+        return recent query
+        """ 
+        return list(self.r_query)
     def debug(self, level, var="", msg=None):
         strval = str(level) + ": "
         if msg:
@@ -211,7 +218,7 @@ class ZabbixAPI(object):
             self.debug(logging.INFO,"HTTP Auth enabled")
             auth='Basic ' + string.strip(base64.encodestring(self.httpuser + ':' + self.httppasswd))
             headers['Authorization'] = auth
-
+        self.r_query.append(str(json_obj))
         self.debug(logging.INFO, "Sending: " + str(json_obj))
         self.debug(logging.DEBUG, "Sending headers: " + str(headers))
 
