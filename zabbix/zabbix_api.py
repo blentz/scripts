@@ -43,13 +43,13 @@ __logger.addHandler(default_log_handler)
 __logger.log(10,"Starting logging")
 
 try:
-    # Python 2.5+
-    import json
-    __logger.log(15,"Using native json library")
-except ImportError:
-    # Python 2.4
+    # Separate module or Python <2.6
     import simplejson as json
     __logger.log(15,"Using simplejson library")
+except ImportError:
+    # Python >=2.6
+    import json
+    __logger.log(15,"Using native json library")
 
 class ZabbixAPIException(Exception):
     """ generic zabbix api exception
