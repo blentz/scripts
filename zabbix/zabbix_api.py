@@ -2744,253 +2744,42 @@ class ZabbixAPIUserMacro(ZabbixAPISubClass):
     @dojson('usermacro.get')
     @checkauth
     def get(self,**opts):
-        """  * Get UserMacros data
- *
- * {@source}
- * @access public
- * @static
- * @since 1.8
- * @version 1
- *
- * @param _array $options
- * @param array $options['nodeids'] Node IDs
- * @param array $options['groupids'] UserMacrosGroup IDs
- * @param array $options['macroids'] UserMacros IDs
- * @param boolean $options['monitored_macros'] only monitored UserMacros
- * @param boolean $options['templated_macros'] include templates in result
- * @param boolean $options['with_items'] only with items
- * @param boolean $options['with_monitored_items'] only with monitored items
- * @param boolean $options['with_historical_items'] only with historical items
- * @param boolean $options['with_triggers'] only with triggers
- * @param boolean $options['with_monitored_triggers'] only with monitored triggers
- * @param boolean $options['with_httptests'] only with http tests
- * @param boolean $options['with_monitored_httptests'] only with monitored http tests
- * @param boolean $options['with_graphs'] only with graphs
- * @param boolean $options['editable'] only with read-write permission. Ignored for SuperAdmins
- * @param int $options['extendoutput'] return all fields for UserMacros
- * @param int $options['count'] count UserMacros, returned column name is rowscount
- * @param string $options['pattern'] search macros by pattern in macro names
- * @param int $options['limit'] limit selection
- * @param string $options['order'] deprecated parameter (for now)
- * @return array|boolean UserMacros data as array or false if error
-"""
         return opts
 
-    @dojson('usermacro.getHostMacroObjects')
+    @dojson('usermacro.massAdd')
     @checkauth
-    def getHostMacroObjects(self,**opts):
-        """  * Gets all UserMacros data from DB by UserMacros ID
- *
- * {@source}
- * @access public
- * @static
- * @since 1.8
- * @version 1
- *
- * @param _array $macro_data
- * @param string $macro_data['macroid']
- * @return array|boolean UserMacros data as array or false if error
-"""
+    def massAdd(self,**opts):
         return opts
 
-    @dojson('usermacro.add')
+    @dojson('usermacro.massUpdate')
     @checkauth
-    def add(self,**opts):
-        """  * add Host Macro
- *
- * {@source}
- * @access public
- * @static
- * @since 1.8
- * @version 1
- *
- * @param _array $macros
- * @param string $macros[0..]['hostid']
- * @param string $macros[0..]['macro']
- * @param string $macros[0..]['value']
- * @return array of object macros
-"""
-        return opts
-
-    @dojson('usermacro.update')
-    @checkauth
-    def update(self,**opts):
-        """  * Update host macros, replace all with new ones
- *
- * {@source}
- * @access public
- * @static
- * @since 1.8
- * @version 1
- *
- * @param _array $macros
- * @param string $macros['hostid']
- * @param string $macros['macros'][0..]['macro']
- * @param string $macros['macros'][0..]['value']
- * @return array|boolean
-"""
-        return opts
-
-    @dojson('usermacro.updateValue')
-    @checkauth
-    def updateValue(self,**opts):
-        """  * Update macros values
- *
- * {@source}
- * @access public
- * @static
- * @since 1.8
- * @version 1
- *
- * @param _array $macros
- * @param string $macros['hostid']
- * @param string $macros['macros'][0..]['macro']
- * @param string $macros['macros'][0..]['value']
- * @return array|boolean
-"""
+    def massUpdate(self,**opts):
         return opts
 
     @dojson('usermacro.deleteHostMacro')
     @checkauth
     def deleteHostMacro(self,**opts):
-        """  * Delete UserMacros
- *
- * {@source}
- * @access public
- * @static
- * @since 1.8
- * @version 1
- *
- * @param array $hostmacroids
- * @param array $hostmacroids['hostmacroids']
- * @return boolean
-"""
         return opts
 
-    @dojson('usermacro.addGlobal')
+    @dojson('usermacro.createGlobal')
     @checkauth
-    def addGlobal(self,**opts):
-        """  * Add global macros
- *
- * {@source}
- * @access public
- * @static
- * @since 1.8
- * @version 1
- *
- * @param _array $macros
-
- * @param string $macros[0..]['macro']
- * @param string $macros[0..]['value']
- * @return array|boolean
-"""
+    def createGlobal(self,**opts):
         return opts
 
-    @dojson('usermacro.deleteGlobalMacro')
+    @dojson('usermacro.deleteGlobal')
     @checkauth
-    def deleteGlobalMacro(self,**opts):
-        """  * Delete UserMacros
- *
- * {@source}
- * @access public
- * @static
- * @since 1.8
- * @version 1
- *
- * @param array $globalmacroids
- * @param array $globalmacroids['globalmacroids']
- * @return boolean
-"""
+    def deleteGlobal(self,**opts):
         return opts
 
-    @dojson('usermacro.validate')
+    @dojson('usermacro.massRemove')
     @checkauth
-    def validate(self,**opts):
-        """  * Validates macros expression
- *
- * {@source}
- * @access public
- * @static
- * @since 1.8
- * @version 1
- *
- * @param _array $macros array with macros expressions
- * @return array|boolean
-"""
+    def massRemove(self,**opts):
         return opts
 
-    @dojson('usermacro.getGlobalMacroObjects')
+    @dojson('usermacro.updateGlobal')
     @checkauth
-    def getGlobalMacroObjects(self,**opts):
-        """  * Gets all UserMacros data from DB by UserMacros ID
- *
- * {@source}
- * @access public
- * @static
- * @since 1.8
- * @version 1
- *
- * @param _array $macro_data
- * @param string $macro_data['macroid']
- * @return array|boolean UserMacros data as array or false if error
-"""
-        return opts
-
-    @dojson('usermacro.getHostMacroId')
-    @checkauth
-    def getHostMacroId(self,**opts):
-        """  * Get UserMacros ID by UserMacros name
- *
- * {@source}
- * @access public
- * @static
- * @since 1.8
- * @version 1
- *
- * @param _array $macro_data
- * @param string $macro_data['macro']
- * @param string $macro_data['hostid']
- * @return int|boolean
-"""
-        return opts
-
-    @dojson('usermacro.getGlobalMacroId')
-    @checkauth
-    def getGlobalMacroId(self,**opts):
-        """  * Get UserMacros ID by UserMacros name
- *
- * {@source}
- * @access public
- * @static
- * @since 1.8
- * @version 1
- *
- * @param _array $macro_data
- * @param string $macro_data['macro']
- * @return int|boolean
-"""
-        return opts
-
-    @dojson('usermacro.getMacros')
-    @checkauth
-    def getMacros(self,**opts):
-        """
-"""
-        return opts
-
-    @dojson('usermacro.resolveTrigger')
-    @checkauth
-    def resolveTrigger(self,**opts):
-        """
-"""
-        return opts
-
-    @dojson('usermacro.resolveItem')
-    @checkauth
-    def resolveItem(self,**opts):
-        """ 
-"""
-        return opts 
+    def updateGlobal(self,**opts):
+        return opts    
     
 class ZabbixAPIHistory(ZabbixAPISubClass):
     @dojson('history.get')
