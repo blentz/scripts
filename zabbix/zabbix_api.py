@@ -318,6 +318,14 @@ def dojson(name):
         return wrapper
     return decorator
 
+def dojson2(fn):
+    def wrapper(self, method, opts):
+        self.logger.log(logging.DEBUG, \
+                "Going to do_request for %s with opts %s" \
+                %(repr(fn),repr(opts)))
+        return self.do_request(self.json_obj(method,opts))['result']
+    return wrapper
+
 class ZabbixAPIUser(ZabbixAPISubClass):
     @dojson('user.get')
     @checkauth
@@ -782,136 +790,16 @@ class ZabbixAPIHost(ZabbixAPISubClass):
         return opts
 
 class ZabbixAPIItem(ZabbixAPISubClass):
-    @dojson('item.get')
-    @checkauth
-    def get(self,**opts):
-        """  * Get items data
- *
- * {@source}
- * @access public
- * @static
- * @since 1.8
- * @version 1
- *
- * @param array $options
- * @param array $options['itemids']
- * @param array $options['hostids']
- * @param array $options['groupids']
- * @param array $options['triggerids']
- * @param array $options['applicationids']
- * @param boolean $options['status']
- * @param boolean $options['templated_items']
- * @param boolean $options['editable']
- * @param boolean $options['count']
- * @param string $options['pattern']
- * @param int $options['limit']
- * @param string $options['order']
- * @return array|int item data as array or false if error
-"""
-        return opts
+    def __getattr__(self, name):
+        def method(*opts):
+            self.universal("item.%s" % name, opts)
+        return method
     
-    @dojson('item.getObjects')
+    @dojson2
     @checkauth
-    def getObjects(self,**opts):
-        """      * Get itemid by host.name and item.key
-     *
-     * {@source}
-     * @access public
-     * @static
-     * @since 1.8
-     * @version 1
-     *
-     * @param array $item_data
-     * @param array $item_data['key_']
-     * @param array $item_data['hostid']
-     * @return int|boolean
-"""
-        return opts
-
-    @dojson('item.create')
-    @checkauth
-    def create(self,**opts):
-        """      * Create item
-     *
-     * {@source}
-     * @access public
-     * @static
-     * @since 1.8
-     * @version 1
-     *
-     * Input array $items has following structure and default values :
-     * <code>
-     * array( array(
-     * *'description'            => *,
-     * *'key_'                => *,
-     * *'hostid'                => *,
-     * 'delay'                => 60,
-     * 'history'                => 7,
-     * 'status'                => ITEM_STATUS_ACTIVE,
-     * 'type'                => ITEM_TYPE_ZABBIX,
-     * 'snmp_community'            => '',
-     * 'snmp_oid'                => '',
-     * 'value_type'                => ITEM_VALUE_TYPE_STR,
-     * 'data_type'                => ITEM_DATA_TYPE_DECIMAL,
-     * 'trapper_hosts'            => 'localhost',
-     * 'snmp_port'                => 161,
-     * 'units'                => '',
-     * 'multiplier'                => 0,
-     * 'delta'                => 0,
-     * 'snmpv3_securityname'        => '',
-     * 'snmpv3_securitylevel'        => 0,
-     * 'snmpv3_authpassphrase'        => '',
-     * 'snmpv3_privpassphrase'        => '',
-     * 'formula'                => 0,
-     * 'trends'                => 365,
-     * 'logtimefmt'                => '',
-     * 'valuemapid'                => 0,
-     * 'delay_flex'                => '',
-     * 'params'                => '',
-     * 'ipmi_sensor'            => '',
-     * 'applications'            => array(),
-     * 'templateid'                => 0
-     * ), ...);
-     * </code>
-     *
-     * @param array $items multidimensional array with items data
-     * @return array|boolean
-"""
-        return opts
-
-    @dojson('item.update')
-    @checkauth
-    def update(self,**opts):
-        """  * Update item
- *
- * {@source}
- * @access public
- * @static
- * @since 1.8
- * @version 1
- *
- * @param array $items multidimensional array with items data
- * @return boolean
-"""
-        return opts
-
-    @dojson('item.delete')
-    @checkauth
-    def delete(self,**opts):
-        """  * Delete items
- *
- * {@source}
- * @access public
- * @static
- * @since 1.8
- * @version 1
- *
- * @param _array $items multidimensional array with item objects
- * @param array $items[0,...]['itemid']
- * @return deleted items
-"""
-        return opts
-    
+    def universal(self,**opts):
+        return opt
+  
 class ZabbixAPIUserGroup(ZabbixAPISubClass):
     
     @dojson('usergroup.get')
