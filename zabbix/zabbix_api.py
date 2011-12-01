@@ -792,7 +792,7 @@ class ZabbixAPIHost(ZabbixAPISubClass):
 class ZabbixAPIItem(ZabbixAPISubClass):
     def __getattr__(self, name):
         def method(*opts):
-            return self.universal("item.%s" % name, opts)
+            return self.universal("item.%s" % name, opts[0])
         return method
     
     @dojson2
