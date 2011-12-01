@@ -51,6 +51,31 @@ except ImportError:
     import json
     __logger.log(15,"Using native json library")
 
+def checkauth(fn):
+    """ Decorator to check authentication of the decorated method """
+    def ret(self,*args):
+        self.__checkauth__()
+        return fn(self,args)
+    return ret
+
+def dojson(name):
+    def decorator(fn):
+        def wrapper(self,opts):
+            self.logger.log(logging.DEBUG, \
+                    "Going to do_request for %s with opts %s" \
+                    %(repr(fn),repr(opts)))
+            return self.do_request(self.json_obj(name,opts))['result']
+        return wrapper
+    return decorator
+
+def dojson2(fn):
+    def wrapper(self, method, opts):
+        self.logger.log(logging.DEBUG, \
+                "Going to do_request for %s with opts %s" \
+                %(repr(fn),repr(opts)))
+        return self.do_request(self.json_obj(method,opts))['result']
+    return wrapper
+
 class ZabbixAPIException(Exception):
     """ generic zabbix api exception
     code list:
@@ -301,30 +326,13 @@ class ZabbixAPISubClass(ZabbixAPI):
     def json_obj(self, method, param):
         return self.parent.json_obj(method, param)
 
-def checkauth(fn):
-    """ Decorator to check authentication of the decorated method """
-    def ret(self,*args):
-        self.__checkauth__()
-        return fn(self,args)
-    return ret
+    @dojson2
+    @checkauth
+    def universal(self, **opts):
+        return opt
+ 
 
-def dojson(name):
-    def decorator(fn):
-        def wrapper(self,opts):
-            self.logger.log(logging.DEBUG, \
-                    "Going to do_request for %s with opts %s" \
-                    %(repr(fn),repr(opts)))
-            return self.do_request(self.json_obj(name,opts))['result']
-        return wrapper
-    return decorator
 
-def dojson2(fn):
-    def wrapper(self, method, opts):
-        self.logger.log(logging.DEBUG, \
-                "Going to do_request for %s with opts %s" \
-                %(repr(fn),repr(opts)))
-        return self.do_request(self.json_obj(method,opts))['result']
-    return wrapper
 
 class ZabbixAPIUser(ZabbixAPISubClass):
     @dojson('user.get')
@@ -580,6 +588,11 @@ class ZabbixAPIUser(ZabbixAPISubClass):
 
 class ZabbixAPIHost(ZabbixAPISubClass):
 
+    def __getattr__(self, name):
+        def method(*opts):
+            return self.universal("item.%s" % name, opts[0])
+        return method
+
     @dojson('host.get')
     @checkauth
     def get(self,**opts):
@@ -795,11 +808,7 @@ class ZabbixAPIItem(ZabbixAPISubClass):
             return self.universal("item.%s" % name, opts[0])
         return method
     
-    @dojson2
-    @checkauth
-    def universal(self,**opts):
-        return opt
-  
+#  
 class ZabbixAPIUserGroup(ZabbixAPISubClass):
     
     @dojson('usergroup.get')
