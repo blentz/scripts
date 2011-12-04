@@ -40,41 +40,45 @@ from collections import deque
 default_log_handler = logging.StreamHandler(sys.stdout)
 __logger = logging.getLogger("zabbix_api")
 __logger.addHandler(default_log_handler)
-__logger.log(10,"Starting logging")
+__logger.log(10, "Starting logging")
 
 try:
     # Separate module or Python <2.6
     import simplejson as json
-    __logger.log(15,"Using simplejson library")
+    __logger.log(15, "Using simplejson library")
 except ImportError:
     # Python >=2.6
     import json
-    __logger.log(15,"Using native json library")
+    __logger.log(15, "Using native json library")
+
 
 def checkauth(fn):
     """ Decorator to check authentication of the decorated method """
-    def ret(self,*args):
+    def ret(self, *args):
         self.__checkauth__()
-        return fn(self,args)
+        return fn(self, args)
     return ret
+
 
 def dojson(name):
     def decorator(fn):
-        def wrapper(self,opts):
+        def wrapper(self, opts):
             self.logger.log(logging.DEBUG, \
                     "Going to do_request for %s with opts %s" \
-                    %(repr(fn),repr(opts)))
-            return self.do_request(self.json_obj(name,opts))['result']
+                    % (repr(fn), repr(opts)))
+            return self.do_request(self.json_obj(name, opts))['result']
         return wrapper
     return decorator
+
 
 def dojson2(fn):
     def wrapper(self, method, opts):
         self.logger.log(logging.DEBUG, \
                 "Going to do_request for %s with opts %s" \
-                %(repr(fn),repr(opts)))
-        return self.do_request(self.json_obj(method,opts))['result']
+                % (repr(fn), repr(opts)))
+        return self.do_request(self.json_obj(method, opts))['result']
     return wrapper
+
 
 class ZabbixAPIException(Exception):
     """ generic zabbix api exception
@@ -84,12 +88,15 @@ class ZabbixAPIException(Exception):
     """
     pass
 
+
 class Already_Exists(ZabbixAPIException):
     pass
+
 
 class InvalidProtoError(ZabbixAPIException):
     """ Recived an invalid proto """
     pass
+
 
 class ZabbixAPI(object):
     __username__ = ''
@@ -128,44 +135,46 @@ class ZabbixAPI(object):
     # log_level: logging level
     # r_query_len: max len query history
     # **kwargs: Data to pass to each api module
-    def __init__(self, server='http://localhost/zabbix', user=None, passwd=None, 
-                 log_level = logging.WARNING, timeout = 10, r_query_len = 10, **kwargs):
+
+    def __init__(self, server='http://localhost/zabbix', user=None, passwd=None,
+                 log_level=logging.WARNING, timeout=10, r_query_len=10, **kwargs):
         """ Create an API object.  """
         self._setuplogging()
         self.set_log_level(log_level)
-        self.server=server
-        self.url=server+'/api_jsonrpc.php'
-        self.proto=self.server.split("://")[0]
+        self.server = server
+        self.url = server + '/api_jsonrpc.php'
+        self.proto = self.server.split("://")[0]
         #self.proto=proto
-        self.httpuser=user
-        self.httppasswd=passwd
+        self.httpuser = user
+        self.httppasswd = passwd
         self.timeout = timeout
-        self.user = ZabbixAPIUser(self,**kwargs)
-        self.usergroup = ZabbixAPIUserGroup(self,**kwargs)
-        self.host = ZabbixAPIHost(self,**kwargs)
-        self.item = ZabbixAPIItem(self,**kwargs)
-        self.hostgroup = ZabbixAPIHostGroup(self,**kwargs)
-        self.application = ZabbixAPIApplication(self,**kwargs)
-        self.trigger = ZabbixAPITrigger(self,**kwargs)
-        self.template = ZabbixAPITemplate(self,**kwargs)
-        self.action = ZabbixAPIAction(self,**kwargs)
-        self.alert = ZabbixAPIAlert(self,**kwargs)
-        self.info = ZabbixAPIInfo(self,**kwargs)
-        self.event = ZabbixAPIEvent(self,**kwargs)
-        self.graph = ZabbixAPIGraph(self,**kwargs)
-        self.graphitem = ZabbixAPIGraphItem(self,**kwargs)
-        self.map = ZabbixAPIMap(self,**kwargs)
-        self.screen = ZabbixAPIScreen(self,**kwargs)
-        self.script = ZabbixAPIScript(self,**kwargs)
-        self.usermacro = ZabbixAPIUserMacro(self,**kwargs)
-        self.map = ZabbixAPIMap(self,**kwargs)
-        self.drule = ZabbixAPIDRule(self,**kwargs)
-        self.history = ZabbixAPIHistory(self,**kwargs)
-        self.maintenance = ZabbixAPIMaintenance(self,**kwargs)
-        self.proxy = ZabbixAPIProxy(self,**kwargs)
+        self.user = ZabbixAPIUser(self, **kwargs)
+        self.usergroup = ZabbixAPIUserGroup(self, **kwargs)
+        self.host = ZabbixAPIHost(self, **kwargs)
+        self.item = ZabbixAPIItem(self, **kwargs)
+        self.hostgroup = ZabbixAPIHostGroup(self, **kwargs)
+        self.application = ZabbixAPIApplication(self, **kwargs)
+        self.trigger = ZabbixAPITrigger(self, **kwargs)
+        self.template = ZabbixAPITemplate(self, **kwargs)
+        self.action = ZabbixAPIAction(self, **kwargs)
+        self.alert = ZabbixAPIAlert(self, **kwargs)
+        self.info = ZabbixAPIInfo(self, **kwargs)
+        self.event = ZabbixAPIEvent(self, **kwargs)
+        self.graph = ZabbixAPIGraph(self, **kwargs)
+        self.graphitem = ZabbixAPIGraphItem(self, **kwargs)
+        self.map = ZabbixAPIMap(self, **kwargs)
+        self.screen = ZabbixAPIScreen(self, **kwargs)
+        self.script = ZabbixAPIScript(self, **kwargs)
+        self.usermacro = ZabbixAPIUserMacro(self, **kwargs)
+        self.map = ZabbixAPIMap(self, **kwargs)
+        self.drule = ZabbixAPIDRule(self, **kwargs)
+        self.history = ZabbixAPIHistory(self, **kwargs)
+        self.maintenance = ZabbixAPIMaintenance(self, **kwargs)
+        self.proxy = ZabbixAPIProxy(self, **kwargs)
         self.id = 0
-        self.r_query = deque([], maxlen = r_query_len)
-        self.debug(logging.INFO, "url: "+ self.url)
+        self.r_query = deque([], maxlen=r_query_len)
+        self.debug(logging.INFO, "url: " + self.url)
+
     def _setuplogging(self):
         self.logger = logging.getLogger("zabbix_api.%s" % self.__class__.__name__)
 
@@ -176,8 +185,9 @@ class ZabbixAPI(object):
     def recent_query(self):
         """
         return recent query
-        """ 
+        """
         return list(self.r_query)
+
     def debug(self, level, var="", msg=None):
         strval = str(level) + ": "
         if msg:
@@ -185,14 +195,14 @@ class ZabbixAPI(object):
         if var != "":
             strval = strval + str(var)
 
-        self.logger.log(level,strval)
+        self.logger.log(level, strval)
 
     def json_obj(self, method, params={}):
-        obj = { 'jsonrpc' : '2.0',
-                'method'  : method,
-                'params'  : params,
-                'auth'    : self.auth,
-                'id'      : self.id
+        obj = {'jsonrpc' : '2.0',
+               'method'  : method,
+               'params'  : params,
+               'auth'    : self.auth,
+               'id'      : self.id
               }
 
         self.debug(logging.DEBUG, "json_obj: " + str(obj))
@@ -215,50 +225,49 @@ class ZabbixAPI(object):
 
         # don't print the raw password.
         hashed_pw_string = "md5(" + hashlib.md5(l_password).hexdigest() + ")"
-        self.debug(logging.DEBUG,"Trying to login with %s:%s"% \
-                (repr(l_user),repr(hashed_pw_string)))
-        obj = self.json_obj('user.authenticate', { 'user' : l_user,
+        self.debug(logging.DEBUG, "Trying to login with %s:%s" % \
+                (repr(l_user), repr(hashed_pw_string)))
+        obj = self.json_obj('user.authenticate', {'user': l_user,
                 'password' : l_password })
         result = self.do_request(obj)
         self.auth = result['result']
 
     def test_login(self):
         if self.auth != '':
-            obj = self.json_obj('user.checkAuthentication', {'sessionid' : self.auth})
+            obj = self.json_obj('user.checkAuthentication', {'sessionid': self.auth})
             result = self.do_request(obj)
 
             if not result['result']:
                 self.auth = ''
-                return False # auth hash bad
-            return True # auth hash good
+                return False  # auth hash bad
+            return True  # auth hash good
         else:
             return False
 
     def do_request(self, json_obj):
-        headers = { 'Content-Type' : 'application/json-rpc',
-                    'User-Agent' : 'python/zabbix_api' }
+        headers = {'Content-Type' : 'application/json-rpc',
+                   'User-Agent' : 'python/zabbix_api' }
 
         if self.httpuser:
-            self.debug(logging.INFO,"HTTP Auth enabled")
-            auth='Basic ' + string.strip(base64.encodestring(self.httpuser + ':' + self.httppasswd))
+            self.debug(logging.INFO, "HTTP Auth enabled")
+            auth = 'Basic ' + string.strip(base64.encodestring(self.httpuser + ':' + self.httppasswd))
             headers['Authorization'] = auth
         self.r_query.append(str(json_obj))
         self.debug(logging.INFO, "Sending: " + str(json_obj))
         self.debug(logging.DEBUG, "Sending headers: " + str(headers))
 
-        request=urllib2.Request(url=self.url, data=json_obj,headers=headers)
-        if self.proto=="https":
-            https_handler=urllib2.HTTPSHandler(debuglevel=0)
-            opener=urllib2.build_opener(https_handler)
-        elif self.proto=="http":
-            http_handler=urllib2.HTTPHandler(debuglevel=0)
-            opener=urllib2.build_opener(http_handler)
+        request = urllib2.Request(url=self.url, data=json_obj, headers=headers)
+        if self.proto == "https":
+            https_handler = urllib2.HTTPSHandler(debuglevel=0)
+            opener = urllib2.build_opener(https_handler)
+        elif self.proto == "http":
+            http_handler = urllib2.HTTPHandler(debuglevel=0)
+            opener = urllib2.build_opener(http_handler)
         else:
-            raise ZabbixAPIException("Unknow protocol %s"%self.proto)
-        
+            raise ZabbixAPIException("Unknow protocol %s" % self.proto)
+
         urllib2.install_opener(opener)
-        response=opener.open(request, timeout = self.timeout)
-        
+        response = opener.open(request, timeout=self.timeout)
         self.debug(logging.INFO, "Response Code: " + str(response.code))
 
         # NOTE: Getting a 412 response code means the headers are not in the
@@ -266,13 +275,13 @@ class ZabbixAPI(object):
         if response.code != 200:
             raise ZabbixAPIException("HTTP ERROR %s: %s"
                     % (response.status, response.reason))
-        reads=response.read()
-        if len(reads)==0:
+        reads = response.read()
+        if len(reads) == 0:
             raise ZabbixAPIException("Received zero answer")
         try:
             jobj = json.loads(reads)
-        except ValueError,msg:
-            print "unable to decode. returned string: %s"%reads
+        except ValueError, msg:
+            print "unable to decode. returned string: %s" % reads
             sys.exit(-1)
         self.debug(logging.DEBUG, "Response Body: " + str(jobj))
 
@@ -280,11 +289,11 @@ class ZabbixAPI(object):
 
         if 'error' in jobj:  # some exception
             msg = "Error %s: %s, %s while sending %s" % (jobj['error']['code'],
-                    jobj['error']['message'], jobj['error']['data'],str(json_obj))
-            if re.search(".*already\sexists.*",jobj["error"]["data"],re.I):  # already exists
-                raise Already_Exists(msg,jobj['error']['code'])
+                    jobj['error']['message'], jobj['error']['data'], str(json_obj))
+            if re.search(".*already\sexists.*", jobj["error"]["data"], re.I):  # already exists
+                raise Already_Exists(msg, jobj['error']['code'])
             else:
-                raise ZabbixAPIException(msg,jobj['error']['code'])
+                raise ZabbixAPIException(msg, jobj['error']['code'])
         return jobj
 
     def logged_in(self):
@@ -301,19 +310,20 @@ class ZabbixAPI(object):
         if not self.logged_in():
             raise ZabbixAPIException("Not logged in.")
 
+
 class ZabbixAPISubClass(ZabbixAPI):
     """ wrapper class to ensure all calls go through the parent object """
     parent = None
 
     def __init__(self, parent, **kwargs):
         self._setuplogging()
-        self.debug(logging.INFO,"Creating %s"%self.__class__.__name__)
+        self.debug(logging.INFO, "Creating %s" % self.__class__.__name__)
 
         self.parent = parent
-        # Save any extra info passed in 
-        for key,val in kwargs.items():
-            setattr(self,key,val)
-            self.debug(logging.WARNING,"Set %s:%s"%(repr(key),repr(val)))
+        # Save any extra info passed in
+        for key, val in kwargs.items():
+            setattr(self, key, val)
+            self.debug(logging.WARNING, "Set %s:%s" % (repr(key), repr(val)))
 
     def __checkauth__(self):
         self.parent.__checkauth__()
@@ -328,7 +338,7 @@ class ZabbixAPISubClass(ZabbixAPI):
     @checkauth
     def universal(self, **opts):
         return opt
- 
+
 
 class ZabbixAPIUser(ZabbixAPISubClass):
     def __getattr__(self, name):
@@ -336,35 +346,41 @@ class ZabbixAPIUser(ZabbixAPISubClass):
             return self.universal("user.%s" % name, opts[0])
         return method
 
+
 class ZabbixAPIHost(ZabbixAPISubClass):
     def __getattr__(self, name):
         def method(*opts):
             return self.universal("host.%s" % name, opts[0])
         return method
 
+
 class ZabbixAPIItem(ZabbixAPISubClass):
     def __getattr__(self, name):
         def method(*opts):
             return self.universal("item.%s" % name, opts[0])
         return method
-    
+
+
 class ZabbixAPIUserGroup(ZabbixAPISubClass):
     def __getattr__(self, name):
         def method(*opts):
             return self.universal("usergroup.%s" % name, opts[0])
         return method
 
+
 class ZabbixAPIHostGroup(ZabbixAPISubClass):
     def __getattr__(self, name):
         def method(*opts):
             return self.universal("hostgroup.%s" % name, opts[0])
         return method
-    
+
+
 class ZabbixAPIApplication(ZabbixAPISubClass):
     def __getattr__(self, name):
         def method(*opts):
             return self.universal("application.%s" % name, opts[0])
         return method
+
 
 class ZabbixAPITrigger(ZabbixAPISubClass):
     def __getattr__(self, name):
@@ -372,11 +388,13 @@ class ZabbixAPITrigger(ZabbixAPISubClass):
             return self.universal("trigger.%s" % name, opts[0])
         return method
 
+
 class ZabbixAPIMap(ZabbixAPISubClass):
     def __getattr__(self, name):
         def method(*opts):
             return self.universal("map.%s" % name, opts[0])
         return method
+
 
 class ZabbixAPITemplate(ZabbixAPISubClass):
     def __getattr__(self, name):
@@ -384,11 +402,13 @@ class ZabbixAPITemplate(ZabbixAPISubClass):
             return self.universal("template.%s" % name, opts[0])
         return method
 
+
 class ZabbixAPIAction(ZabbixAPISubClass):
     def __getattr__(self, name):
         def method(*opts):
             return self.universal("action.%s" % name, opts[0])
         return method
+
 
 class ZabbixAPIAlert(ZabbixAPISubClass):
     def __getattr__(self, name):
@@ -396,11 +416,13 @@ class ZabbixAPIAlert(ZabbixAPISubClass):
             return self.universal("alert.%s" % name, opts[0])
         return method
 
+
 class ZabbixAPIInfo(ZabbixAPISubClass):
     def __getattr__(self, name):
         def method(*opts):
             return self.universal("apiinfo.%s" % name, opts[0])
         return method
+
 
 class ZabbixAPIEvent(ZabbixAPISubClass):
     def __getattr__(self, name):
@@ -408,11 +430,13 @@ class ZabbixAPIEvent(ZabbixAPISubClass):
             return self.universal("event.%s" % name, opts[0])
         return method
 
+
 class ZabbixAPIGraph(ZabbixAPISubClass):
     def __getattr__(self, name):
         def method(*opts):
             return self.universal("graph.%s" % name, opts[0])
         return method
+
 
 class ZabbixAPIGraphItem(ZabbixAPISubClass):
     def __getattr__(self, name):
@@ -420,11 +444,13 @@ class ZabbixAPIGraphItem(ZabbixAPISubClass):
             return self.universal("graphitem.%s" % name, opts[0])
         return method
 
+
 class ZabbixAPIScreen(ZabbixAPISubClass):
     def __getattr__(self, name):
         def method(*opts):
             return self.universal("screen.%s" % name, opts[0])
         return method
+
 
 class ZabbixAPIScript(ZabbixAPISubClass):
     def __getattr__(self, name):
@@ -432,11 +458,13 @@ class ZabbixAPIScript(ZabbixAPISubClass):
             return self.universal("script.%s" % name, opts[0])
         return method
 
+
 class ZabbixAPIDRule(ZabbixAPISubClass):
     def __getattr__(self, name):
         def method(*opts):
             return self.universal("drule.%s" % name, opts[0])
         return method
+
 
 class ZabbixAPIUserMacro(ZabbixAPISubClass):
     def __getattr__(self, name):
@@ -444,17 +472,20 @@ class ZabbixAPIUserMacro(ZabbixAPISubClass):
             return self.universal("usermacro.%s" % name, opts[0])
         return method
 
+
 class ZabbixAPIHistory(ZabbixAPISubClass):
     def __getattr__(self, name):
         def method(*opts):
             return self.universal("history.%s" % name, opts[0])
         return method
 
+
 class ZabbixAPIProxy(ZabbixAPISubClass):
     def __getattr__(self, name):
         def method(*opts):
             return self.universal("proxy.%s" % name, opts[0])
         return method
+
 
 class ZabbixAPIMaintenance(ZabbixAPISubClass):
     def __getattr__(self, name):
