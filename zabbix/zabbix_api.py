@@ -31,10 +31,11 @@ import hashlib
 import logging
 import string
 import sys
-import urllib2
-import json
+try:
+    import urllib2
+except ImportError:
+    import urllib.request as urllib2  # python3
 import re
-from socket import gaierror
 from collections import deque
 
 default_log_handler = logging.StreamHandler(sys.stdout)
@@ -103,7 +104,6 @@ class ZabbixAPI(object):
     __password__ = ''
 
     auth = ''
-    id = 0
     url = '/api_jsonrpc.php'
     params = None
     method = None
@@ -224,7 +224,7 @@ class ZabbixAPI(object):
             raise ZabbixAPIException("No authentication information available.")
 
         # don't print the raw password.
-        hashed_pw_string = "md5(" + hashlib.md5(l_password).hexdigest() + ")"
+        hashed_pw_string = "md5(" + hashlib.md5(l_password.encode('utf-8')).hexdigest() + ")"
         self.debug(logging.DEBUG, "Trying to login with %s:%s" % \
                 (repr(l_user), repr(hashed_pw_string)))
         obj = self.json_obj('user.authenticate', {'user': l_user,
@@ -256,7 +256,7 @@ class ZabbixAPI(object):
         self.debug(logging.INFO, "Sending: " + str(json_obj))
         self.debug(logging.DEBUG, "Sending headers: " + str(headers))
 
-        request = urllib2.Request(url=self.url, data=json_obj, headers=headers)
+        request = urllib2.Request(url=self.url, data=json_obj.encode('utf-8'), headers=headers)
         if self.proto == "https":
             https_handler = urllib2.HTTPSHandler(debuglevel=0)
             opener = urllib2.build_opener(https_handler)
@@ -279,9 +279,9 @@ class ZabbixAPI(object):
         if len(reads) == 0:
             raise ZabbixAPIException("Received zero answer")
         try:
-            jobj = json.loads(reads)
-        except ValueError, msg:
-            print "unable to decode. returned string: %s" % reads
+            jobj = json.loads(reads.decode('utf-8'))
+        except ValueError as msg:
+            print ("unable to decode. returned string: %s" % reads)
             sys.exit(-1)
         self.debug(logging.DEBUG, "Response Body: " + str(jobj))
 
@@ -337,7 +337,7 @@ class ZabbixAPISubClass(ZabbixAPI):
     @dojson2
     @checkauth
     def universal(self, **opts):
-        return opt
+        return opts
 
 
 class ZabbixAPIUser(ZabbixAPISubClass):
