@@ -148,29 +148,29 @@ class ZabbixAPI(object):
         self.httpuser = user
         self.httppasswd = passwd
         self.timeout = timeout
-        self.usergroup = ZabbixAPISubClass(self, dict({"prefix":"usergroup"}, **kwargs))
-        self.user = ZabbixAPISubClass(self, dict({"prefix":"user"}, **kwargs))
-        self.host = ZabbixAPISubClass(self, dict({"prefix":"host"}, **kwargs))
-        self.item = ZabbixAPISubClass(self, dict({"prefix":"item"}, **kwargs))
-        self.hostgroup = ZabbixAPISubClass(self, dict({"prefix":"hostgroup"}, **kwargs))
-        self.application = ZabbixAPISubClass(self, dict({"prefix":"application"}, **kwargs))
-        self.trigger = ZabbixAPISubClass(self, dict({"prefix":"trigger"}, **kwargs))
-        self.template = ZabbixAPISubClass(self, dict({"prefix":"template"}, **kwargs))
-        self.action = ZabbixAPISubClass(self, dict({"prefix":"action"}, **kwargs))
-        self.alert = ZabbixAPISubClass(self, dict({"prefix":"alert"}, **kwargs))
-        self.info = ZabbixAPISubClass(self, dict({"prefix":"info"}, **kwargs))
-        self.event = ZabbixAPISubClass(self, dict({"prefix":"event"}, **kwargs))
-        self.graph = ZabbixAPISubClass(self, dict({"prefix":"graph"}, **kwargs))
-        self.graphitem = ZabbixAPISubClass(self, dict({"prefix":"graphitem"}, **kwargs))
-        self.map = ZabbixAPISubClass(self, dict({"prefix":"map"}, **kwargs))
-        self.screen = ZabbixAPISubClass(self, dict({"prefix":"screen"}, **kwargs))
-        self.script = ZabbixAPISubClass(self, dict({"prefix":"script"}, **kwargs))
-        self.usermacro = ZabbixAPISubClass(self, dict({"prefix":"usermacro"}, **kwargs))
-        self.map = ZabbixAPISubClass(self, dict({"prefix":"map"}, **kwargs))
-        self.drule = ZabbixAPISubClass(self, dict({"prefix":"drule"}, **kwargs))
-        self.history = ZabbixAPISubClass(self, dict({"prefix":"history"}, **kwargs))
-        self.maintenance = ZabbixAPISubClass(self, dict({"prefix":"maintenance"}, **kwargs))
-        self.proxy = ZabbixAPISubClass(self, dict({"prefix":"proxy"}, **kwargs))
+        self.usergroup = ZabbixAPISubClass(self, dict({"prefix": "usergroup"}, **kwargs))
+        self.user = ZabbixAPISubClass(self, dict({"prefix": "user"}, **kwargs))
+        self.host = ZabbixAPISubClass(self, dict({"prefix": "host"}, **kwargs))
+        self.item = ZabbixAPISubClass(self, dict({"prefix": "item"}, **kwargs))
+        self.hostgroup = ZabbixAPISubClass(self, dict({"prefix": "hostgroup"}, **kwargs))
+        self.application = ZabbixAPISubClass(self, dict({"prefix": "application"}, **kwargs))
+        self.trigger = ZabbixAPISubClass(self, dict({"prefix": "trigger"}, **kwargs))
+        self.template = ZabbixAPISubClass(self, dict({"prefix": "template"}, **kwargs))
+        self.action = ZabbixAPISubClass(self, dict({"prefix": "action"}, **kwargs))
+        self.alert = ZabbixAPISubClass(self, dict({"prefix": "alert"}, **kwargs))
+        self.info = ZabbixAPISubClass(self, dict({"prefix": "info"}, **kwargs))
+        self.event = ZabbixAPISubClass(self, dict({"prefix": "event"}, **kwargs))
+        self.graph = ZabbixAPISubClass(self, dict({"prefix": "graph"}, **kwargs))
+        self.graphitem = ZabbixAPISubClass(self, dict({"prefix": "graphitem"}, **kwargs))
+        self.map = ZabbixAPISubClass(self, dict({"prefix": "map"}, **kwargs))
+        self.screen = ZabbixAPISubClass(self, dict({"prefix": "screen"}, **kwargs))
+        self.script = ZabbixAPISubClass(self, dict({"prefix": "script"}, **kwargs))
+        self.usermacro = ZabbixAPISubClass(self, dict({"prefix": "usermacro"}, **kwargs))
+        self.map = ZabbixAPISubClass(self, dict({"prefix": "map"}, **kwargs))
+        self.drule = ZabbixAPISubClass(self, dict({"prefix": "drule"}, **kwargs))
+        self.history = ZabbixAPISubClass(self, dict({"prefix": "history"}, **kwargs))
+        self.maintenance = ZabbixAPISubClass(self, dict({"prefix": "maintenance"}, **kwargs))
+        self.proxy = ZabbixAPISubClass(self, dict({"prefix": "proxy"}, **kwargs))
         self.id = 0
         self.r_query = deque([], maxlen=r_query_len)
         self.debug(logging.INFO, "url: " + self.url)
@@ -198,11 +198,11 @@ class ZabbixAPI(object):
         self.logger.log(level, strval)
 
     def json_obj(self, method, params={}):
-        obj = {'jsonrpc' : '2.0',
-               'method'  : method,
-               'params'  : params,
-               'auth'    : self.auth,
-               'id'      : self.id
+        obj = {'jsonrpc': '2.0',
+               'method': method,
+               'params': params,
+               'auth': self.auth,
+               'id': self.id
               }
 
         self.debug(logging.DEBUG, "json_obj: " + str(obj))
@@ -228,7 +228,7 @@ class ZabbixAPI(object):
         self.debug(logging.DEBUG, "Trying to login with %s:%s" % \
                 (repr(l_user), repr(hashed_pw_string)))
         obj = self.json_obj('user.authenticate', {'user': l_user,
-                'password' : l_password })
+                'password': l_password})
         result = self.do_request(obj)
         self.auth = result['result']
 
@@ -245,8 +245,8 @@ class ZabbixAPI(object):
             return False
 
     def do_request(self, json_obj):
-        headers = {'Content-Type' : 'application/json-rpc',
-                   'User-Agent' : 'python/zabbix_api' }
+        headers = {'Content-Type': 'application/json-rpc',
+                   'User-Agent': 'python/zabbix_api'}
 
         if self.httpuser:
             self.debug(logging.INFO, "HTTP Auth enabled")
@@ -315,12 +315,13 @@ class ZabbixAPISubClass(ZabbixAPI):
     """ wrapper class to ensure all calls go through the parent object """
     parent = None
     data = None
-    def __init__(self, parent, data,  **kwargs):
+
+    def __init__(self, parent, data, **kwargs):
         self._setuplogging()
         self.debug(logging.INFO, "Creating %s" % self.__class__.__name__)
-        self.data = data 
+        self.data = data
         self.parent = parent
-        
+
         # Save any extra info passed in
         for key, val in kwargs.items():
             setattr(self, key, val)
