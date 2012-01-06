@@ -325,6 +325,11 @@ class ZabbixAPISubClass(ZabbixAPI):
             setattr(self, key, val)
             self.debug(logging.WARNING, "Set %s:%s" % (repr(key), repr(val)))
 
+    def __getattr__(self, name):
+        def method(*opts):
+            return self.universal("%s.%s" % (self.prefix, name), opts[0])
+        return method
+
     def __checkauth__(self):
         self.parent.__checkauth__()
 
@@ -355,140 +360,80 @@ class ZabbixAPIHost(ZabbixAPISubClass):
 
 
 class ZabbixAPIItem(ZabbixAPISubClass):
-    def __getattr__(self, name):
-        def method(*opts):
-            return self.universal("item.%s" % name, opts[0])
-        return method
+    prefix = "item"
 
 
 class ZabbixAPIUserGroup(ZabbixAPISubClass):
-    def __getattr__(self, name):
-        def method(*opts):
-            return self.universal("usergroup.%s" % name, opts[0])
-        return method
+    prefix = "usergroup"
 
 
 class ZabbixAPIHostGroup(ZabbixAPISubClass):
-    def __getattr__(self, name):
-        def method(*opts):
-            return self.universal("hostgroup.%s" % name, opts[0])
-        return method
+    prefix = "hostgroup"
 
 
 class ZabbixAPIApplication(ZabbixAPISubClass):
-    def __getattr__(self, name):
-        def method(*opts):
-            return self.universal("application.%s" % name, opts[0])
-        return method
+    prefix = "application"
 
 
 class ZabbixAPITrigger(ZabbixAPISubClass):
-    def __getattr__(self, name):
-        def method(*opts):
-            return self.universal("trigger.%s" % name, opts[0])
-        return method
+    prefix = "trigger"
 
 
 class ZabbixAPIMap(ZabbixAPISubClass):
-    def __getattr__(self, name):
-        def method(*opts):
-            return self.universal("map.%s" % name, opts[0])
-        return method
+    prefix = "map"
 
 
 class ZabbixAPITemplate(ZabbixAPISubClass):
-    def __getattr__(self, name):
-        def method(*opts):
-            return self.universal("template.%s" % name, opts[0])
-        return method
+    prefix = "template"
 
 
 class ZabbixAPIAction(ZabbixAPISubClass):
-    def __getattr__(self, name):
-        def method(*opts):
-            return self.universal("action.%s" % name, opts[0])
-        return method
+    prefix = "action"
 
 
 class ZabbixAPIAlert(ZabbixAPISubClass):
-    def __getattr__(self, name):
-        def method(*opts):
-            return self.universal("alert.%s" % name, opts[0])
-        return method
+    prefix = "alert"
 
 
 class ZabbixAPIInfo(ZabbixAPISubClass):
-    def __getattr__(self, name):
-        def method(*opts):
-            return self.universal("apiinfo.%s" % name, opts[0])
-        return method
+    prefix = "apiinfo"
 
 
 class ZabbixAPIEvent(ZabbixAPISubClass):
-    def __getattr__(self, name):
-        def method(*opts):
-            return self.universal("event.%s" % name, opts[0])
-        return method
+    prefix = "event"
 
 
 class ZabbixAPIGraph(ZabbixAPISubClass):
-    def __getattr__(self, name):
-        def method(*opts):
-            return self.universal("graph.%s" % name, opts[0])
-        return method
+    prefix = "graph"
 
 
 class ZabbixAPIGraphItem(ZabbixAPISubClass):
-    def __getattr__(self, name):
-        def method(*opts):
-            return self.universal("graphitem.%s" % name, opts[0])
-        return method
+    prefix = "graphitem"
 
 
 class ZabbixAPIScreen(ZabbixAPISubClass):
-    def __getattr__(self, name):
-        def method(*opts):
-            return self.universal("screen.%s" % name, opts[0])
-        return method
+    prefix = "screen"
 
 
 class ZabbixAPIScript(ZabbixAPISubClass):
-    def __getattr__(self, name):
-        def method(*opts):
-            return self.universal("script.%s" % name, opts[0])
-        return method
+    prefix = "script"
 
 
 class ZabbixAPIDRule(ZabbixAPISubClass):
-    def __getattr__(self, name):
-        def method(*opts):
-            return self.universal("drule.%s" % name, opts[0])
-        return method
+    prefix = "drule"
 
 
 class ZabbixAPIUserMacro(ZabbixAPISubClass):
-    def __getattr__(self, name):
-        def method(*opts):
-            return self.universal("usermacro.%s" % name, opts[0])
-        return method
+    prefix = "usermacro"
 
 
 class ZabbixAPIHistory(ZabbixAPISubClass):
-    def __getattr__(self, name):
-        def method(*opts):
-            return self.universal("history.%s" % name, opts[0])
-        return method
+    prefix = "history"
 
 
 class ZabbixAPIProxy(ZabbixAPISubClass):
-    def __getattr__(self, name):
-        def method(*opts):
-            return self.universal("proxy.%s" % name, opts[0])
-        return method
+    prefix = "proxy"
 
 
 class ZabbixAPIMaintenance(ZabbixAPISubClass):
-    def __getattr__(self, name):
-        def method(*opts):
-            return self.universal("maintenance.%s" % name, opts[0])
-        return method
+    prefix = "maintenance"
