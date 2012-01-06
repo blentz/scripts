@@ -148,29 +148,29 @@ class ZabbixAPI(object):
         self.httpuser = user
         self.httppasswd = passwd
         self.timeout = timeout
-        self.user = ZabbixAPIUser(self, **kwargs)
-        self.usergroup = ZabbixAPIUserGroup(self, **kwargs)
-        self.host = ZabbixAPIHost(self, **kwargs)
-        self.item = ZabbixAPIItem(self, **kwargs)
-        self.hostgroup = ZabbixAPIHostGroup(self, **kwargs)
-        self.application = ZabbixAPIApplication(self, **kwargs)
-        self.trigger = ZabbixAPITrigger(self, **kwargs)
-        self.template = ZabbixAPITemplate(self, **kwargs)
-        self.action = ZabbixAPIAction(self, **kwargs)
-        self.alert = ZabbixAPIAlert(self, **kwargs)
-        self.info = ZabbixAPIInfo(self, **kwargs)
-        self.event = ZabbixAPIEvent(self, **kwargs)
-        self.graph = ZabbixAPIGraph(self, **kwargs)
-        self.graphitem = ZabbixAPIGraphItem(self, **kwargs)
-        self.map = ZabbixAPIMap(self, **kwargs)
-        self.screen = ZabbixAPIScreen(self, **kwargs)
-        self.script = ZabbixAPIScript(self, **kwargs)
-        self.usermacro = ZabbixAPIUserMacro(self, **kwargs)
-        self.map = ZabbixAPIMap(self, **kwargs)
-        self.drule = ZabbixAPIDRule(self, **kwargs)
-        self.history = ZabbixAPIHistory(self, **kwargs)
-        self.maintenance = ZabbixAPIMaintenance(self, **kwargs)
-        self.proxy = ZabbixAPIProxy(self, **kwargs)
+        self.usergroup = ZabbixAPISubClass(self, dict({"prefix":"usergroup"}, **kwargs))
+        self.user = ZabbixAPISubClass(self, dict({"prefix":"user"}, **kwargs))
+        self.host = ZabbixAPISubClass(self, dict({"prefix":"host"}, **kwargs))
+        self.item = ZabbixAPISubClass(self, dict({"prefix":"item"}, **kwargs))
+        self.hostgroup = ZabbixAPISubClass(self, dict({"prefix":"hostgroup"}, **kwargs))
+        self.application = ZabbixAPISubClass(self, dict({"prefix":"application"}, **kwargs))
+        self.trigger = ZabbixAPISubClass(self, dict({"prefix":"trigger"}, **kwargs))
+        self.template = ZabbixAPISubClass(self, dict({"prefix":"template"}, **kwargs))
+        self.action = ZabbixAPISubClass(self, dict({"prefix":"action"}, **kwargs))
+        self.alert = ZabbixAPISubClass(self, dict({"prefix":"alert"}, **kwargs))
+        self.info = ZabbixAPISubClass(self, dict({"prefix":"info"}, **kwargs))
+        self.event = ZabbixAPISubClass(self, dict({"prefix":"event"}, **kwargs))
+        self.graph = ZabbixAPISubClass(self, dict({"prefix":"graph"}, **kwargs))
+        self.graphitem = ZabbixAPISubClass(self, dict({"prefix":"graphitem"}, **kwargs))
+        self.map = ZabbixAPISubClass(self, dict({"prefix":"map"}, **kwargs))
+        self.screen = ZabbixAPISubClass(self, dict({"prefix":"screen"}, **kwargs))
+        self.script = ZabbixAPISubClass(self, dict({"prefix":"script"}, **kwargs))
+        self.usermacro = ZabbixAPISubClass(self, dict({"prefix":"usermacro"}, **kwargs))
+        self.map = ZabbixAPISubClass(self, dict({"prefix":"map"}, **kwargs))
+        self.drule = ZabbixAPISubClass(self, dict({"prefix":"drule"}, **kwargs))
+        self.history = ZabbixAPISubClass(self, dict({"prefix":"history"}, **kwargs))
+        self.maintenance = ZabbixAPISubClass(self, dict({"prefix":"maintenance"}, **kwargs))
+        self.proxy = ZabbixAPISubClass(self, dict({"prefix":"proxy"}, **kwargs))
         self.id = 0
         self.r_query = deque([], maxlen=r_query_len)
         self.debug(logging.INFO, "url: " + self.url)
@@ -314,12 +314,13 @@ class ZabbixAPI(object):
 class ZabbixAPISubClass(ZabbixAPI):
     """ wrapper class to ensure all calls go through the parent object """
     parent = None
-
-    def __init__(self, parent, **kwargs):
+    data = None
+    def __init__(self, parent, data,  **kwargs):
         self._setuplogging()
         self.debug(logging.INFO, "Creating %s" % self.__class__.__name__)
-
+        self.data = data 
         self.parent = parent
+        
         # Save any extra info passed in
         for key, val in kwargs.items():
             setattr(self, key, val)
@@ -327,7 +328,7 @@ class ZabbixAPISubClass(ZabbixAPI):
 
     def __getattr__(self, name):
         def method(*opts):
-            return self.universal("%s.%s" % (self.prefix, name), opts[0])
+            return self.universal("%s.%s" % (self.data["prefix"], name), opts[0])
         return method
 
     def __checkauth__(self):
@@ -343,97 +344,3 @@ class ZabbixAPISubClass(ZabbixAPI):
     @checkauth
     def universal(self, **opts):
         return opts
-
-
-class ZabbixAPIUser(ZabbixAPISubClass):
-    def __getattr__(self, name):
-        def method(*opts):
-            return self.universal("user.%s" % name, opts[0])
-        return method
-
-
-class ZabbixAPIHost(ZabbixAPISubClass):
-    def __getattr__(self, name):
-        def method(*opts):
-            return self.universal("host.%s" % name, opts[0])
-        return method
-
-
-class ZabbixAPIItem(ZabbixAPISubClass):
-    prefix = "item"
-
-
-class ZabbixAPIUserGroup(ZabbixAPISubClass):
-    prefix = "usergroup"
-
-
-class ZabbixAPIHostGroup(ZabbixAPISubClass):
-    prefix = "hostgroup"
-
-
-class ZabbixAPIApplication(ZabbixAPISubClass):
-    prefix = "application"
-
-
-class ZabbixAPITrigger(ZabbixAPISubClass):
-    prefix = "trigger"
-
-
-class ZabbixAPIMap(ZabbixAPISubClass):
-    prefix = "map"
-
-
-class ZabbixAPITemplate(ZabbixAPISubClass):
-    prefix = "template"
-
-
-class ZabbixAPIAction(ZabbixAPISubClass):
-    prefix = "action"
-
-
-class ZabbixAPIAlert(ZabbixAPISubClass):
-    prefix = "alert"
-
-
-class ZabbixAPIInfo(ZabbixAPISubClass):
-    prefix = "apiinfo"
-
-
-class ZabbixAPIEvent(ZabbixAPISubClass):
-    prefix = "event"
-
-
-class ZabbixAPIGraph(ZabbixAPISubClass):
-    prefix = "graph"
-
-
-class ZabbixAPIGraphItem(ZabbixAPISubClass):
-    prefix = "graphitem"
-
-
-class ZabbixAPIScreen(ZabbixAPISubClass):
-    prefix = "screen"
-
-
-class ZabbixAPIScript(ZabbixAPISubClass):
-    prefix = "script"
-
-
-class ZabbixAPIDRule(ZabbixAPISubClass):
-    prefix = "drule"
-
-
-class ZabbixAPIUserMacro(ZabbixAPISubClass):
-    prefix = "usermacro"
-
-
-class ZabbixAPIHistory(ZabbixAPISubClass):
-    prefix = "history"
-
-
-class ZabbixAPIProxy(ZabbixAPISubClass):
-    prefix = "proxy"
-
-
-class ZabbixAPIMaintenance(ZabbixAPISubClass):
-    prefix = "maintenance"
