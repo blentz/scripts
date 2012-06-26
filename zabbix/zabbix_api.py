@@ -171,6 +171,7 @@ class ZabbixAPI(object):
         self.history = ZabbixAPISubClass(self, dict({"prefix": "history"}, **kwargs))
         self.maintenance = ZabbixAPISubClass(self, dict({"prefix": "maintenance"}, **kwargs))
         self.proxy = ZabbixAPISubClass(self, dict({"prefix": "proxy"}, **kwargs))
+        self.apiinfo = ZabbixAPISubClass(self, dict({"prefix": "apiinfo"}, **kwargs))
         self.id = 0
         self.r_query = deque([], maxlen=r_query_len)
         self.debug(logging.INFO, "url: " + self.url)
