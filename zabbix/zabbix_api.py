@@ -339,6 +339,9 @@ class ZabbixAPISubClass(ZabbixAPI):
             self.debug(logging.WARNING, "Set %s:%s" % (repr(key), repr(val)))
 
     def __getattr__(self, name):
+        if self.data["prefix"] == "configuration" and name == "import_":  # workaround for "import" method
+            name = "import"
+
         def method(*opts):
             return self.universal("%s.%s" % (self.data["prefix"], name), opts[0])
         return method
