@@ -5,7 +5,9 @@ and subject to change.
 Implementations of the Zabbix API in other languages may
 be found on the wiki.
 
+Zabbix 1.8 and 2.0 are supported.
+
 See also:
 * http://www.zabbix.com/wiki/doc/api
-* http://www.zabbix.com/documentation/1.8/api
+* http://www.zabbix.com/documentation/2.0/manual/appendix/api/api
 * http://www.zabbix.com/forum/showthread.php?t=15218
