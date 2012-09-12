@@ -5,7 +5,7 @@ Created on 01.10.2010
 '''
 from zabbix_api import ZabbixAPI
 
-server="127.0.0.1"
+server="http://127.0.0.1"
 username="api"
 password="apipass"
 
