@@ -119,6 +119,7 @@ class ZabbixAPI(object):
     host = None
     item = None
     hostgroup = None
+    hostinterface = None
     application = None
     trigger = None
     sysmap = None
@@ -153,6 +154,7 @@ class ZabbixAPI(object):
         self.host = ZabbixAPISubClass(self, dict({"prefix": "host"}, **kwargs))
         self.item = ZabbixAPISubClass(self, dict({"prefix": "item"}, **kwargs))
         self.hostgroup = ZabbixAPISubClass(self, dict({"prefix": "hostgroup"}, **kwargs))
+        self.hostinterface = ZabbixAPISubClass(self, dict({"prefix": "hostinterface"}, **kwargs))
         self.application = ZabbixAPISubClass(self, dict({"prefix": "application"}, **kwargs))
         self.trigger = ZabbixAPISubClass(self, dict({"prefix": "trigger"}, **kwargs))
         self.template = ZabbixAPISubClass(self, dict({"prefix": "template"}, **kwargs))
