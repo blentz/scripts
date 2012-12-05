@@ -182,6 +182,7 @@ class ZabbixAPI(object):
         self.service = ZabbixAPISubClass(self, dict({"prefix": "service"}, **kwargs))
         self.templatescreen = ZabbixAPISubClass(self, dict({"prefix": "templatescreen"}, **kwargs))
         self.usermedia = ZabbixAPISubClass(self, dict({"prefix": "usermedia"}, **kwargs))
+        self.hostinterface = ZabbixAPISubClass(self, dict({"prefix": "hostinterface"}, **kwargs))
         self.id = 0
         self.r_query = deque([], maxlen=r_query_len)
         self.debug(logging.INFO, "url: " + self.url)
