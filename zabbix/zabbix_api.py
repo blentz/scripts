@@ -137,7 +137,7 @@ class ZabbixAPI(object):
     # r_query_len: max len query history
     # **kwargs: Data to pass to each api module
 
-    def __init__(self, server='http://localhost/zabbix', user=None, passwd=None,
+    def __init__(self, server='http://localhost/zabbix', user=httpuser, passwd=httppasswd,
                  log_level=logging.WARNING, timeout=10, r_query_len=10, **kwargs):
         """ Create an API object.  """
         self._setuplogging()
@@ -280,7 +280,11 @@ class ZabbixAPI(object):
             raise ZabbixAPIException("Unknow protocol %s" % self.proto)
 
         urllib2.install_opener(opener)
-        response = opener.open(request, timeout=self.timeout)
+        try:
+            response = opener.open(request, timeout=self.timeout)
+        except Exception as e:
+            self.debug(logging.ERROR, "Site needs HTTP authentication. Error: "+str(e))
+            sys.exit(-1)
         self.debug(logging.INFO, "Response Code: " + str(response.code))
 
         # NOTE: Getting a 412 response code means the headers are not in the
