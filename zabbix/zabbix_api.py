@@ -185,6 +185,9 @@ class ZabbixAPI(object):
         self.templatescreen = ZabbixAPISubClass(self, dict({"prefix": "templatescreen"}, **kwargs))
         self.usermedia = ZabbixAPISubClass(self, dict({"prefix": "usermedia"}, **kwargs))
         self.hostinterface = ZabbixAPISubClass(self, dict({"prefix": "hostinterface"}, **kwargs))
+        self.triggerprototype = ZabbixAPISubClass(self, dict({"prefix": "triggerprototype"}, **kwargs))
+        self.graphprototype = ZabbixAPISubClass(self, dict({"prefix": "graphprototype"}, **kwargs))
+        self.itemprototype = ZabbixAPISubClass(self, dict({"prefix": "itemprototype"}, **kwargs))
         self.id = 0
         self.r_query = deque([], maxlen=r_query_len)
         self.debug(logging.INFO, "url: " + self.url)
