@@ -188,6 +188,7 @@ class ZabbixAPI(object):
         self.triggerprototype = ZabbixAPISubClass(self, dict({"prefix": "triggerprototype"}, **kwargs))
         self.graphprototype = ZabbixAPISubClass(self, dict({"prefix": "graphprototype"}, **kwargs))
         self.itemprototype = ZabbixAPISubClass(self, dict({"prefix": "itemprototype"}, **kwargs))
+        self.webcheck = ZabbixAPISubClass(self, dict({"prefix": "webcheck"}, **kwargs))
         self.id = 0
         self.r_query = deque([], maxlen=r_query_len)
         self.debug(logging.INFO, "url: " + self.url)
