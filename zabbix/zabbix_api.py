@@ -288,8 +288,7 @@ class ZabbixAPI(object):
         try:
             response = opener.open(request, timeout=self.timeout)
         except Exception as e:
-            self.debug(logging.ERROR, "Site needs HTTP authentication. Error: "+str(e))
-            sys.exit(-1)
+            raise ZabbixAPIException("Site needs HTTP authentication. Error: "+str(e))
         self.debug(logging.INFO, "Response Code: " + str(response.code))
 
         # NOTE: Getting a 412 response code means the headers are not in the
