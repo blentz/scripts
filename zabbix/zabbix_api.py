@@ -166,6 +166,7 @@ class ZabbixAPI(object):
         self.graphitem = ZabbixAPISubClass(self, dict({"prefix": "graphitem"}, **kwargs))
         self.map = ZabbixAPISubClass(self, dict({"prefix": "map"}, **kwargs))
         self.screen = ZabbixAPISubClass(self, dict({"prefix": "screen"}, **kwargs))
+        self.screenitem = ZabbixAPISubClass(self, dict({"prefix": "screenitem"}, **kwargs))
         self.script = ZabbixAPISubClass(self, dict({"prefix": "script"}, **kwargs))
         self.usermacro = ZabbixAPISubClass(self, dict({"prefix": "usermacro"}, **kwargs))
         self.drule = ZabbixAPISubClass(self, dict({"prefix": "drule"}, **kwargs))
