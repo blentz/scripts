@@ -69,14 +69,14 @@ if [ -z "$CACHE" ]; then
 				fi
 			fi
 			if [ $((${SMARTSTATUS} & 1<<6)) -gt 0 ]; then
-				SMARTSTR="ton of errors in log"
 				ERRLOG_COUNT="`sudo smartctl -l error $DISK 2>/dev/null | grep Error\ Count`"
 				ERRLOG_COUNT=${ERRLOG_COUNT##*: }
 				ERRLOG_COUNT=${ERRLOG_COUNT%% *}
 			fi
 			if [ -n "${SMARTSTR}" -o \( ${ERRLOG_COUNT} -gt ${ERRLOG_COUNT_THRESHOLD} \) ]; then
+				SMARTSTR="ton of errors in log"
 				RES="${RES}${DISK} ${SMARTSTR}
-"			
+"
 			fi
 		fi
 		IFS="${NIFS}"
