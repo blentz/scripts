@@ -216,13 +216,14 @@ class ZabbixAPI(object):
 
         self.logger.log(level, strval)
 
-    def json_obj(self, method, params={}):
+    def json_obj(self, method, params={},auth=True):
         obj = {'jsonrpc': '2.0',
                'method': method,
                'params': params,
                'auth': self.auth,
                'id': self.id
               }
+        if not auth: del obj['auth']
 
         self.debug(logging.DEBUG, "json_obj: " + str(obj))
 
@@ -246,8 +247,8 @@ class ZabbixAPI(object):
         hashed_pw_string = "md5(" + hashlib.md5(l_password.encode('utf-8')).hexdigest() + ")"
         self.debug(logging.DEBUG, "Trying to login with %s:%s" % \
                 (repr(l_user), repr(hashed_pw_string)))
-        obj = self.json_obj('user.authenticate', {'user': l_user,
-                'password': l_password})
+        obj = self.json_obj('user.login', {'user': l_user,
+        'password': l_password},auth=False)
         result = self.do_request(obj)
         self.auth = result['result']
 
@@ -325,7 +326,7 @@ class ZabbixAPI(object):
 
     def api_version(self, **options):
         self.__checkauth__()
-        obj = self.do_request(self.json_obj('APIInfo.version', options))
+        obj = self.do_request(self.json_obj('APIInfo.version', options,auth=False))
         return obj['result']
 
     def __checkauth__(self):
