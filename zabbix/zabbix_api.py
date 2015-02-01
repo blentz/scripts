@@ -31,6 +31,8 @@ import hashlib
 import logging
 import string
 import sys
+import ssl
+import socket
 try:
     import urllib2
 except ImportError:
@@ -96,6 +98,10 @@ class Already_Exists(ZabbixAPIException):
 
 class InvalidProtoError(ZabbixAPIException):
     """ Recived an invalid proto """
+    pass
+
+
+class APITimeout(ZabbixAPIException):
     pass
 
 
@@ -289,8 +295,18 @@ class ZabbixAPI(object):
         urllib2.install_opener(opener)
         try:
             response = opener.open(request, timeout=self.timeout)
-        except Exception as e:
-            raise ZabbixAPIException("Site needs HTTP authentication. Error: "+str(e))
+        except ssl.SSLError as e:
+            if e.message == "The read operation timed out":
+                raise APITimeout("SSL read timeout",)
+            else:
+                raise e
+        except socket.timeout as e:
+            raise APITimeout("HTTP read timeout",)
+        except urllib2.URLError as e:
+            if "Connection timed out" in e.message:
+                raise APITimeout("HTTP read timeout",)
+            else:
+                raise e
         self.debug(logging.INFO, "Response Code: " + str(response.code))
 
         # NOTE: Getting a 412 response code means the headers are not in the
