@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 
 """
@@ -15,10 +15,10 @@ def read(fname):
 setup(
     name='zabbix-api',
     url='https://github.com/gescheit/scripts',
-    version='0.1',
+    version='0.2',
     license='GNU LGPL 2.1',
     author='Aleksandr Balezin',
-    author_email='gescheit@list.ru',
+    author_email='gescheit12@gmail.com',
     description='Zabbix API',
     long_description=read('README'),
     py_modules=['zabbix_api'],
