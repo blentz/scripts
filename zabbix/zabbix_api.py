@@ -63,17 +63,6 @@ def checkauth(fn):
     return ret
 
 
-def dojson(name):
-    def decorator(fn):
-        def wrapper(self, opts):
-            self.logger.log(logging.DEBUG, \
-                    "Going to do_request for %s with opts %s" \
-                    % (repr(fn), repr(opts)))
-            return self.do_request(self.json_obj(name, opts))['result']
-        return wrapper
-    return decorator
-
-
 def dojson2(fn):
     def wrapper(self, method, opts):
         self.logger.log(logging.DEBUG, \
