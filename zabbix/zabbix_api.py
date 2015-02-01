@@ -144,47 +144,7 @@ class ZabbixAPI(object):
         self.httpuser = user
         self.httppasswd = passwd
         self.timeout = timeout
-        self.usergroup = ZabbixAPISubClass(self, dict({"prefix": "usergroup"}, **kwargs))
-        self.user = ZabbixAPISubClass(self, dict({"prefix": "user"}, **kwargs))
-        self.host = ZabbixAPISubClass(self, dict({"prefix": "host"}, **kwargs))
-        self.item = ZabbixAPISubClass(self, dict({"prefix": "item"}, **kwargs))
-        self.hostgroup = ZabbixAPISubClass(self, dict({"prefix": "hostgroup"}, **kwargs))
-        self.hostinterface = ZabbixAPISubClass(self, dict({"prefix": "hostinterface"}, **kwargs))
-        self.application = ZabbixAPISubClass(self, dict({"prefix": "application"}, **kwargs))
-        self.trigger = ZabbixAPISubClass(self, dict({"prefix": "trigger"}, **kwargs))
-        self.template = ZabbixAPISubClass(self, dict({"prefix": "template"}, **kwargs))
-        self.action = ZabbixAPISubClass(self, dict({"prefix": "action"}, **kwargs))
-        self.alert = ZabbixAPISubClass(self, dict({"prefix": "alert"}, **kwargs))
-        self.info = ZabbixAPISubClass(self, dict({"prefix": "info"}, **kwargs))
-        self.event = ZabbixAPISubClass(self, dict({"prefix": "event"}, **kwargs))
-        self.graph = ZabbixAPISubClass(self, dict({"prefix": "graph"}, **kwargs))
-        self.graphitem = ZabbixAPISubClass(self, dict({"prefix": "graphitem"}, **kwargs))
-        self.map = ZabbixAPISubClass(self, dict({"prefix": "map"}, **kwargs))
-        self.screen = ZabbixAPISubClass(self, dict({"prefix": "screen"}, **kwargs))
-        self.screenitem = ZabbixAPISubClass(self, dict({"prefix": "screenitem"}, **kwargs))
-        self.script = ZabbixAPISubClass(self, dict({"prefix": "script"}, **kwargs))
-        self.usermacro = ZabbixAPISubClass(self, dict({"prefix": "usermacro"}, **kwargs))
-        self.drule = ZabbixAPISubClass(self, dict({"prefix": "drule"}, **kwargs))
-        self.history = ZabbixAPISubClass(self, dict({"prefix": "history"}, **kwargs))
-        self.maintenance = ZabbixAPISubClass(self, dict({"prefix": "maintenance"}, **kwargs))
-        self.proxy = ZabbixAPISubClass(self, dict({"prefix": "proxy"}, **kwargs))
-        self.apiinfo = ZabbixAPISubClass(self, dict({"prefix": "apiinfo"}, **kwargs))
-        self.configuration = ZabbixAPISubClass(self, dict({"prefix": "configuration"}, **kwargs))
-        self.dcheck = ZabbixAPISubClass(self, dict({"prefix": "dcheck"}, **kwargs))
-        self.dhost = ZabbixAPISubClass(self, dict({"prefix": "dhost"}, **kwargs))
-        self.discoveryrule = ZabbixAPISubClass(self, dict({"prefix": "discoveryrule"}, **kwargs))
-        self.dservice = ZabbixAPISubClass(self, dict({"prefix": "dservice"}, **kwargs))
-        self.iconmap = ZabbixAPISubClass(self, dict({"prefix": "iconmap"}, **kwargs))
-        self.image = ZabbixAPISubClass(self, dict({"prefix": "image"}, **kwargs))
-        self.mediatype = ZabbixAPISubClass(self, dict({"prefix": "mediatype"}, **kwargs))
-        self.service = ZabbixAPISubClass(self, dict({"prefix": "service"}, **kwargs))
-        self.templatescreen = ZabbixAPISubClass(self, dict({"prefix": "templatescreen"}, **kwargs))
-        self.usermedia = ZabbixAPISubClass(self, dict({"prefix": "usermedia"}, **kwargs))
-        self.hostinterface = ZabbixAPISubClass(self, dict({"prefix": "hostinterface"}, **kwargs))
-        self.triggerprototype = ZabbixAPISubClass(self, dict({"prefix": "triggerprototype"}, **kwargs))
-        self.graphprototype = ZabbixAPISubClass(self, dict({"prefix": "graphprototype"}, **kwargs))
-        self.itemprototype = ZabbixAPISubClass(self, dict({"prefix": "itemprototype"}, **kwargs))
-        self.webcheck = ZabbixAPISubClass(self, dict({"prefix": "webcheck"}, **kwargs))
+        self.kwargs = kwargs
         self.id = 0
         self.r_query = deque([], maxlen=r_query_len)
         self.debug(logging.INFO, "url: " + self.url)
@@ -336,6 +296,9 @@ class ZabbixAPI(object):
     def __checkauth__(self):
         if not self.logged_in():
             raise ZabbixAPIException("Not logged in.")
+
+    def __getattr__(self, name):
+        return ZabbixAPISubClass(self, dict({"prefix": name}, **self.kwargs))
 
 
 class ZabbixAPISubClass(ZabbixAPI):
