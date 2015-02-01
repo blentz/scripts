@@ -63,7 +63,7 @@ def checkauth(fn):
     return ret
 
 
-def dojson2(fn):
+def dojson(fn):
     def wrapper(self, method, opts):
         self.logger.log(logging.DEBUG, \
                 "Going to do_request for %s with opts %s" \
@@ -372,7 +372,7 @@ class ZabbixAPISubClass(ZabbixAPI):
     def json_obj(self, method, param):
         return self.parent.json_obj(method, param)
 
-    @dojson2
+    @dojson
     @checkauth
     def universal(self, **opts):
         return opts
