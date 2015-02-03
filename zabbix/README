@@ -10,12 +10,19 @@ Python 2 and 3 are supported.
 
 Future versions must be supported too, if there is no deep changes.
 
+Installation:
+```sh
+# pip install zabbix-api
+```
+
 Short example:
 
-from zabbix_api import ZabbixAPI
-zapi = ZabbixAPI(server="https://server/")
-zapi.login("login", "password")
-zapi.trigger.get({"expandExpression": "extend", "triggerids": range(0, 100)})
+```python
+>>> from zabbix_api import ZabbixAPI
+>>> zapi = ZabbixAPI(server="https://server/")
+>>> zapi.login("login", "password")
+>>> zapi.trigger.get({"expandExpression": "extend", "triggerids": range(0, 100)})
+```
 
 See also:
 * http://www.zabbix.com/wiki/doc/api
