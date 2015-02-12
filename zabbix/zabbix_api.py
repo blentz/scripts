@@ -109,17 +109,6 @@ class ZabbixAPI(object):
     httppasswd = None
     timeout = 10
     # sub-class instances.
-    user = None
-    usergroup = None
-    host = None
-    item = None
-    hostgroup = None
-    hostinterface = None
-    application = None
-    trigger = None
-    sysmap = None
-    template = None
-    drule = None
     # Constructor Params:
     # server: Server to connect to
     # path: Path leading to the zabbix install
