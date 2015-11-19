@@ -40,6 +40,13 @@ except ImportError:
 import re
 from collections import deque
 
+try:
+    from ssl import _create_unverified_context
+    HAS_SSLCONTEXT = True
+except ImportError:
+    HAS_SSLCONTEXT = False
+
+
 default_log_handler = logging.StreamHandler(sys.stdout)
 __logger = logging.getLogger("zabbix_api")
 __logger.addHandler(default_log_handler)
@@ -108,6 +115,7 @@ class ZabbixAPI(object):
     httpuser = None
     httppasswd = None
     timeout = 10
+    validate_certs = None
     # sub-class instances.
     # Constructor Params:
     # server: Server to connect to
@@ -122,7 +130,7 @@ class ZabbixAPI(object):
     # **kwargs: Data to pass to each api module
 
     def __init__(self, server='http://localhost/zabbix', user=httpuser, passwd=httppasswd,
-                 log_level=logging.WARNING, timeout=10, r_query_len=10, **kwargs):
+                 log_level=logging.WARNING, timeout=10, r_query_len=10, validate_certs=True, **kwargs):
         """ Create an API object.  """
         self._setuplogging()
         self.set_log_level(log_level)
@@ -136,6 +144,7 @@ class ZabbixAPI(object):
         self.kwargs = kwargs
         self.id = 0
         self.r_query = deque([], maxlen=r_query_len)
+        self.validate_certs = validate_certs
         self.debug(logging.INFO, "url: " + self.url)
 
     def _setuplogging(self):
@@ -221,7 +230,10 @@ class ZabbixAPI(object):
 
         request = urllib2.Request(url=self.url, data=json_obj.encode('utf-8'), headers=headers)
         if self.proto == "https":
-            https_handler = urllib2.HTTPSHandler(debuglevel=0)
+            if HAS_SSLCONTEXT and not self.validate_certs:
+                https_handler = urllib2.HTTPSHandler(debuglevel=0,context=_create_unverified_context())
+            else:
+                https_handler = urllib2.HTTPSHandler(debuglevel=0)
             opener = urllib2.build_opener(https_handler)
         elif self.proto == "http":
             http_handler = urllib2.HTTPHandler(debuglevel=0)
