@@ -20,7 +20,7 @@ setup(
     author='Aleksandr Balezin',
     author_email='gescheit12@gmail.com',
     description='Zabbix API',
-    long_description=read('README'),
+    long_description=read('README.md'),
     py_modules=['zabbix_api'],
     include_package_data=True,
     zip_safe=False,
