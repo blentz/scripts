@@ -245,17 +245,17 @@ class ZabbixAPI(object):
         try:
             response = opener.open(request, timeout=self.timeout)
         except ssl.SSLError as e:
-            if e.message == "The read operation timed out":
+            if hasattr(e, 'message') and e.message == "The read operation timed out":
                 raise APITimeout("SSL read timeout",)
             else:
-                raise e
+                raise ZabbixAPIException("Unknown error")
         except socket.timeout as e:
             raise APITimeout("HTTP read timeout",)
         except urllib2.URLError as e:
-            if "Connection timed out" in e.message:
+            if hasattr(e, 'message') and "Connection timed out" in e.message:
                 raise APITimeout("HTTP read timeout",)
             else:
-                raise e
+                raise ZabbixAPIException("Unknown error")
         self.debug(logging.INFO, "Response Code: " + str(response.code))
 
         # NOTE: Getting a 412 response code means the headers are not in the
