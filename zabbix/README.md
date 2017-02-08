@@ -5,7 +5,7 @@ and subject to change.
 Implementations of the Zabbix API in other languages may
 be found on the wiki.
 
-Zabbix 1.8, 2.0, 2.2, 2.4 are supported.
+Zabbix 1.8, 2.0, 2.2, 2.4, 3.0 and 3.2 are supported.
 Python 2 and 3 are supported.
 
 Future versions must be supported too, if there is no deep changes.
