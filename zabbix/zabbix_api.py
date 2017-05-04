@@ -256,7 +256,7 @@ class ZabbixAPI(object):
         except urllib2.URLError as e:
             if hasattr(e, 'message') and e.message:
                 e = e.message
-            elsif hasattr(e, 'reason'):
+            elif hasattr(e, 'reason'):
                 e = e.reason
             raise ZabbixAPIException("urllib2.URLError - %s" % e)
         self.debug(logging.INFO, "Response Code: " + str(response.code))
