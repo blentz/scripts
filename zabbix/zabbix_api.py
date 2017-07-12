@@ -293,8 +293,7 @@ class ZabbixAPI(object):
         return False
 
     def api_version(self, **options):
-        self.__checkauth__()
-        obj = self.do_request(self.json_obj('APIInfo.version', options, auth=False))
+        obj = self.do_request(self.json_obj('apiinfo.version', options, auth=False))
         return obj['result']
 
     def __checkauth__(self):
