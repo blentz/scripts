@@ -69,7 +69,7 @@ class SudoCmnd:
             elif self.command not in aliases:
                 commands[self.command] = 1
 
-        if self.runas and self.runas not in ["ANY", "ALL"]:
+        if self.runas and self.runas not in ["ANY", "ALL", "ALL*ALL"]:
             my_ldif.append("sudoRunas: %s" % self.runas)
         if not self.passwd:
             my_ldif.append("sudoOption: !authenticate")
@@ -417,42 +417,50 @@ class SudoersParser:
 
         #remove the colon at the end of NOPASSWDs. Makes parsing easier.
         line = re.sub("NOPASSWD:", "NOPASSWD", line, 0)
+        # line = re.sub("\([^:]+:[^:]+\)", "", line, 0)
+        line = re.sub('\(([^:]+):([^:]+)\)', lambda n: n.group(1) + '*' +
+                n.group(2), line, 0)
 
         m = ruleRE.search(line)
         if m:
-            user = str(m.group(1))
+            users = str(m.group(1))
+            if ',' in users:
+                users = users.split(',')
+            else:
+                users = [users]
 
-            for rule in str(m.group(2)).split(":"):
-                hosts, commands = rule.split("=")
-                parsedCommands = []
-                seenCommands = {}
+            for user in users:
+                for rule in str(m.group(2)).split(":"):
+                    hosts, commands = rule.split("=")
+                    parsedCommands = []
+                    seenCommands = {}
 
-                #TODO: we should probably make SudoCmnd store a list of hosts.
-                for host in hosts.split(","):
-                    host = host.strip()
+                    #TODO: we should probably make SudoCmnd store a list of hosts.
+                    for host in hosts.split(","):
+                        host = host.strip()
 
-                    cmnds = commands.split(",")
-                    cmnds = [ cmnd.strip() for cmnd in cmnds ]
-                    for cmnd in cmnds:
-                        unparsed = cmnd
-                        m = runasRE.search(unparsed)
-                        if m:
-                            runas = str(m.group(1))
-                            unparsed = str(m.group(2))
-                        else:
-                            runas = "ANY"
-                        pos = unparsed.find("NOPASSWD")
-                        if pos > -1:
-                            passwd = False
-                            unparsed = unparsed[pos+len("NOPASSWD"):]
-                        else:
-                            passwd = True
-                        unparsed = unparsed.strip()
+                        cmnds = commands.split(",")
+                        cmnds = [ cmnd.strip() for cmnd in cmnds ]
+                        for cmnd in cmnds:
+                            unparsed = cmnd
+                            ra = runasRE.search(unparsed)
+                            if ra:
+                                runas = str(ra.group(1))
+                                unparsed = str(ra.group(2))
+                            else:
+                                runas = "ANY"
+                            pos = unparsed.find("NOPASSWD")
+                            if pos > -1:
+                                passwd = False
+                                unparsed = unparsed[pos+len("NOPASSWD"):]
+                            else:
+                                passwd = True
+                            unparsed = unparsed.strip()
 
-                        if unparsed not in seenCommands.keys():
-                            parsedCommands.append(SudoCmnd(runas,passwd,unparsed,self,self.options))
-                            seenCommands[unparsed] = 1
-                    sudo_rules.append(SudoRule(user,host,parsedCommands,self,self.options))
+                            if unparsed not in seenCommands.keys():
+                                parsedCommands.append(SudoCmnd(runas,passwd,unparsed,self,self.options))
+                                seenCommands[unparsed] = 1
+                        sudo_rules.append(SudoRule(user,host,parsedCommands,self,self.options))
             return sudo_rules
 
     def _collapseLines(self,lines):
