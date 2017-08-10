@@ -14,6 +14,8 @@
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 import re,grp,socket,sys,os,commands
+import StringIO
+import csv
 from optparse import OptionParser
 
 #TODO: fix ldif output:
@@ -42,7 +44,7 @@ class SudoCmnd:
                 commands = self.sp.cmndAliases[cmndAlias]
 
         if(self.passwd):
-            str = "(%s) %s\n" % (self.runas, self.command)
+            str = "(%s) %s" % (self.runas, self.command)
         else:
             str = "(%s) NOPASSWD: %s" % (self.runas, self.command)
         for command in commands:
@@ -279,18 +281,28 @@ class SudoersParser:
     # what commands can a user run on a particular host?
     # note: we assume that the current user/group environment is the
     # same as the host 
-    def getCommands(self,user,host="localhost"):
-        if(host=="localhost" or host==None):
+    def getCommands(self, user, host="localhost", csv_out=False):
+        if(host=="localhost" or host is None):
             host=socket.gethostname()
 
-        print "\nTesting what %s can run on %s\n" % (user,host)
+        if csv_out:
+            stringIO = StringIO.StringIO()
+            csv_writer = csv.writer(stringIO)
+        else:
+            print "\nTesting what %s can run on %s\n" % (user,host)
         match = False
         for rule in self.rules:
             if(rule.matchUser(user) and rule.matchHost(host)):
                 match = True
                 for cmnd in rule.command:
-                    print cmnd
-        if(not match):
+                    if not csv_out:
+                        print cmnd
+                    else:
+                        csv_writer.writerow([host, user, cmnd])
+        if csv_out:
+            stringIO.pos = 0
+            print(stringIO.read())
+        if not match and not csv_out:
             print "No matches - check spelling\n"
 
     def canRunCommand(self,user,command,host="localhost"):
@@ -417,9 +429,10 @@ class SudoersParser:
 
         #remove the colon at the end of NOPASSWDs. Makes parsing easier.
         line = re.sub("NOPASSWD:", "NOPASSWD", line, 0)
+        line = re.sub("PASSWD:", "PASSWD", line, 0)
         # line = re.sub("\([^:]+:[^:]+\)", "", line, 0)
-        line = re.sub('\(([^:]+):([^:]+)\)', lambda n: n.group(1) + '*' +
-                n.group(2), line, 0)
+        line = re.sub('\(([^:]+):([^:]+)\)', lambda n: '(' + n.group(1) + '*' +
+                n.group(2) + ')', line, 0)
 
         m = ruleRE.search(line)
         if m:
@@ -449,10 +462,10 @@ class SudoersParser:
                                 unparsed = str(ra.group(2))
                             else:
                                 runas = "ANY"
-                            pos = unparsed.find("NOPASSWD")
+                            pos = unparsed.find("PASSWD")
                             if pos > -1:
                                 passwd = False
-                                unparsed = unparsed[pos+len("NOPASSWD"):]
+                                unparsed = unparsed[pos+len("PASSWD"):]
                             else:
                                 passwd = True
                             unparsed = unparsed.strip()
@@ -487,6 +500,8 @@ def createParser():
                       help="username to lookup (mandatory)")
     parser.add_option("-c", "--command", dest="command", metavar="COMMAND",
                       help="Instead of printing all commands, test whether this command can be run")
+    parser.add_option("-C", "--csv", dest="csv_output", action="store_true",
+                      help="CSV output")
     parser.add_option("-l", "--ldif", dest="ldif", action="store_true",
                       help="Print out the sudoers file in LDIF format")
     parser.add_option("--parse-ldif", dest="parse_ldif", action="store_true",
@@ -521,7 +536,7 @@ def main():
         else:
             sys.exit(1)
     elif options.user or options.host:
-        sp.getCommands(options.user,options.host)
+        sp.getCommands(options.user,options.host, options.csv_output)
     elif options.ldif:
         my_ldif = sp.getLDIF()
 
