@@ -15,7 +15,7 @@ def read(fname):
 setup(
     name='zabbix-api',
     url='https://github.com/gescheit/scripts',
-    version='0.3',
+    version='0.5',
     license='GNU LGPL 2.1',
     author='Aleksandr Balezin',
     author_email='gescheit12@gmail.com',
