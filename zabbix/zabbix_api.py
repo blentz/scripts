@@ -207,6 +207,17 @@ class ZabbixAPI(object):
         result = self.do_request(obj)
         self.auth = result['result']
 
+    def logout(self):
+        if self.auth == '':
+            raise ZabbixAPIException("No authentication information available.")
+        self.debug(logging.DEBUG, "Trying to logout user: %s." % self.__username__)
+        obj = self.json_obj('user.logout', auth=True)
+        result = self.do_request(obj)
+        if result['result']:
+            self.auth = ''
+            self.__username__ = ''
+            self.__password__ = ''
+
     def test_login(self):
         if self.auth != '':
             obj = self.json_obj('user.checkAuthentication', {'sessionid': self.auth})
