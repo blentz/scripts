@@ -107,6 +107,7 @@ class APITimeout(ZabbixAPIException):
 class ZabbixAPI(object):
     __username__ = ''
     __password__ = ''
+    __tokenauth__ = False
 
     auth = ''
     url = '/api_jsonrpc.php'
@@ -185,7 +186,16 @@ class ZabbixAPI(object):
 
         return json.dumps(obj)
 
-    def login(self, user='', password='', save=True):
+    def login(self, user='', password='', save=True, api_token=None):
+        if api_token is not None:
+            # due to ZBX-21688 we are unable to check if the token is valid
+            # obj = self.json_obj('user.checkAuthentication', {'sessionid': api_token}, auth=False)
+            # result = self.do_request(obj)
+            self.debug(logging.DEBUG, "Using API Token for auth")
+            self.auth=api_token
+            self.__tokenauth__ = True
+            return
+
         if user != '':
             l_user = user
             l_password = password
@@ -208,6 +218,14 @@ class ZabbixAPI(object):
         self.auth = result['result']
 
     def logout(self):
+        if self.__tokenauth__:
+            # Do nothing for logout for API tokens.
+            self.debug(logging.DEBUG, "Clearing auth information due to use of API Token")
+            self.auth = ''
+            self.__username__ = ''
+            self.__password__ = ''
+            self.__tokenauth__ = False
+            return
         if self.auth == '':
             raise ZabbixAPIException("No authentication information available.")
         self.debug(logging.DEBUG, "Trying to logout user: %s." % self.__username__)
