@@ -12,7 +12,7 @@ def read_descr(fname):
     filepath = os.path.join(os.path.dirname(__file__), fname)
     try:
         import pypandoc
-        long_description = pypandoc.convert(filepath, 'rst')
+        long_description = pypandoc.convert_file(filepath, 'rst')
     except(IOError, ImportError):
         long_description = open(filepath).read()
 
