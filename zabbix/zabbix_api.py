@@ -79,6 +79,8 @@ def dojson(fn):
         return self.do_request(self.json_obj(method, opts))['result']
     return wrapper
 
+def versiontuple(v):
+    return tuple(map(int, (v.split("."))))
 
 class ZabbixAPIException(Exception):
 
@@ -213,7 +215,11 @@ class ZabbixAPI(object):
         hashed_pw_string = "md5(" + hashlib.md5(l_password.encode('utf-8')).hexdigest() + ")"
         self.debug(logging.DEBUG, "Trying to login with %s:%s" %
                 (repr(l_user), repr(hashed_pw_string)))
-        obj = self.json_obj('user.login', {'user': l_user, 'password': l_password}, auth=False)
+        if versiontuple(self.api_version()) >= versiontuple('5.4'):
+            login_arg = {'username': l_user, 'password': l_password}
+        else:
+            login_arg = {'user': l_user, 'password': l_password}
+        obj = self.json_obj('user.login', login_arg, auth=False)
         result = self.do_request(obj)
         self.auth = result['result']
 
