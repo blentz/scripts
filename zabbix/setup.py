@@ -22,7 +22,7 @@ def read_descr(fname):
 setup(
     name='zabbix-api',
     url='https://github.com/gescheit/scripts',
-    version='0.5.5',
+    version='0.5.6',
     license='GNU LGPL 2.1',
     author='Aleksandr Balezin',
     author_email='gescheit12@gmail.com',
