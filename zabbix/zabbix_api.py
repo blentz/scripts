@@ -80,6 +80,24 @@ def dojson(fn):
     return wrapper
 
 
+def version_compare(v1, v2):
+    """
+    The result is 0 if v1 == v2, -1 if v1 < v2, and +1 if v1 > v2
+    """
+    for v1_part, v2_part in zip(v1.split("."), v2.split(".")):
+        if v1_part.isdecimal() and v2_part.isdecimal():
+            if int(v1_part) > int(v2_part):
+                return 1
+            elif int(v1_part) < int(v2_part):
+                return -1
+        else:
+            if v1 > v2:
+                return 1
+            elif v1 < v2:
+                return -1
+    return 0
+
+
 class ZabbixAPIException(Exception):
 
     """ generic zabbix api exception
@@ -213,7 +231,11 @@ class ZabbixAPI(object):
         hashed_pw_string = "md5(" + hashlib.md5(l_password.encode('utf-8')).hexdigest() + ")"
         self.debug(logging.DEBUG, "Trying to login with %s:%s" %
                 (repr(l_user), repr(hashed_pw_string)))
-        obj = self.json_obj('user.login', {'user': l_user, 'password': l_password}, auth=False)
+        if version_compare(self.api_version(), '5.4') >= 0:
+            login_arg = {'username': l_user, 'password': l_password}
+        else:
+            login_arg = {'user': l_user, 'password': l_password}
+        obj = self.json_obj('user.login', login_arg, auth=False)
         result = self.do_request(obj)
         self.auth = result['result']
 
